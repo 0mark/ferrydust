@@ -1,0 +1,86 @@
+#!/bin/dash
+
+if fd-iftrue initRandr; then
+	ferryrandr
+fi
+
+if fd-haskey randrDaemon; then
+	fd-getkey randrDaemon | sh
+fi
+
+# TODO:
+# Font stuff seems to be crux centric
+# Compositing and other stuff is not configurable
+
+# ** Init X11 Fonts
+if fd-iftrue initFonts; then
+	for dir in /usr/share/fonts/*; do
+	if [ "$dir" != "/usr/share/fonts/X11" ]; then
+	    xset +fp $dir
+	fi
+	done;
+	for dir in /usr/share/fonts/X11/*; do
+	    xset +fp $dir
+	done;
+	xset fp rehash
+fi
+
+# ** Xresources
+xrdb ~/.Xresources
+
+# ** Composition
+if fd-haskey startCompositor; then
+	fd-getkey startCompositor | sh
+fi
+
+# ** set kbmap
+if fd-haskey kbmap; then
+	setxkbmap $(fd-getkey kbmap)
+fi
+# ** start DBUS
+if fd-iftrue startDbus; then
+	eval $(dbus-launch --auto-syntax --exit-with-session)
+fi
+
+# ** start keychain
+if fd-iftrue startKeychain; then
+	if fd-haskey sshAskpass; then
+		export SSH_ASKPASS=$(fd-getkey sshAskpass)
+	fi
+	eval `keychain --eval --agents ssh id_rsa`
+fi
+
+# ** start mate keyring
+if fd-iftrue startMateKeyring; then
+	eval $(/usr/bin/mate-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
+	export SSH_AUTH_SOCK
+	export GPG_AGENT_INFO
+	export GNOME_KEYRING_CONTROL
+	export GNOME_KEYRING_PID
+fi
+
+# ** Run Status App
+fd-app status > /home/mark/.log-status 2>&1 &
+
+# ** set Wallpaper
+fd-app wall `fd-getkey wallpaperPath` &
+
+# make DMENUSETTING available
+export DMENUSETTINGS="-fn `fd-getkey font` -nb `fd-getkey bgColor` -nf `fd-getkey fgColor` -sb `fd-getkey bgSelColor` -sf `fd-getkey fgSelColor`"
+
+fd-app keybind &
+
+# ** Run Autostart
+(sleep 1; cat ${XDG_CONFIG_HOME:-$HOME/.config}/ferrydust/autostart | egrep -v '^#' | sh) &
+
+echo "W"
+if fd-iftrue wmRestart; then
+  R=23
+  while [ $R -gt 0 ]; do
+    dwmm
+    R=$?
+    sleep 2
+  done
+else
+  dwmm
+fi

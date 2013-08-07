@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+
+use strict;
+
+my $path=shift();
+if(!$path) {
+  $path = `fd-getkey wallpaperPath`;
+  $path =~ s/\n//g;
+}
+my @imgs;
+my $exec;
+my $app = 'bgs';#`fd-getkey wallApp`;
+$app =~ s/\n//g;
+#my $s=0;
+
+adddir($path);
+print "--\n";
+
+$|=1;
+#while ($s==0) {
+  #$exec="exec dash -c \"".$app." '".$imgs[rand($#imgs)]."'; sleep 10; ~/bin/chbg $path\"";
+  $exec=$app." '".$imgs[rand($#imgs)]."';";
+  print $exec."\n";
+  #$s=system
+  exec $exec;
+  #sleep (1200) if($s==0);
+  #sleep(1200);
+#}
+
+sub adddir() {
+  my $lpath=shift();
+  opendir(DIR, $lpath) || print "error: path $lpath\n"; 
+  my @dir = readdir(DIR);
+  closedir(DIR);
+
+  foreach (@dir) {
+    push (@imgs,$lpath.$_) if (/\.(jpg)|(gif)/i);
+    adddir($lpath.$_."/") if (-d "$lpath$_" && $_ ne "." && $_ ne "..");
+  }
+}
