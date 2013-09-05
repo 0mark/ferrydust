@@ -1,7 +1,7 @@
 #!/bin/dash
 
 if fd-iftrue initRandr; then
-	ferryrandr
+	ferryrandr initialize
 fi
 
 if fd-haskey randrDaemon; then
@@ -9,7 +9,7 @@ if fd-haskey randrDaemon; then
 fi
 
 # TODO:
-# Font stuff seems to be crux centric
+# Font stuff seems to be crux centric [ works on arch too, i guess ]
 # Compositing and other stuff is not configurable
 
 # ** Init X11 Fonts

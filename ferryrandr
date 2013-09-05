@@ -1,5 +1,13 @@
 #!/bin/bash
 
+initialize=0
+
+for i in $(seq 1 2 ${#@}); do
+    case ${@:$i:1} in
+        initialize) initialize=1 ;;
+    esac
+done
+
 custom_randr() { default_randr "$@"; }
 
 # ** load config
@@ -18,9 +26,10 @@ fi
 # your notebook LVDS monitor
 [ -z $DEFAULT_OUTPUT] && DEFAULT_OUTPUT=$(sed -ne 's/.*\(LVDS[^ ]*\).*/\1/p' <<<$OUTPUTS)
 # remove default from list
-OUTPUTS=${OUTPUTS#$DEFAULT_OUTPUT}
+OUTPUTS=${OUTPUTS/$DEFAULT_OUTPUT/}
+
 # get info from xrandr
-XRANDR=`xrandr`
+XRANDR=$(xrandr)
 # number of actually connected outputs
 NUM_CONNECTED=$(echo "$XRANDR" | grep " connected" | wc -l)
 
@@ -55,5 +64,36 @@ default_randr() {
     fi
   done
 }
+
+
+# Filter events that do not really alter anything
+if [ "$2" == "Connected" ]; then
+	if [ "$3" != "None" ]; then
+		echo "Ignoring resolution change..."
+		exit 0
+	#elif [[ $XRANDR =~ .*$1\ connected.*\n.*\*\+  ]]; then
+	elif [[ $XRANDR =~ .*$1\ connected.*\n(.*[0-9]+x[0-9]+\ +[0-9.]+.*\n)*.*[0-9]+x[0-9]+\ +[0-9.]+.*\*.*  ]]; then
+		echo "Ignoring connection of already used Display..."
+		exit 0
+	fi
+elif [ "$2" == "Disconnected" -a "$3" == "None" ]; then
+	echo "Ignoring disconnectetion of unused Display..."
+	exit 0
+fi
+
+# ** Filter repeating events (eg dock/undock with multiple displays)
+lastrandrf="${CPATH}/lastrandr"
+if [ -f "$lastrandrf" ]; then
+    lastrandr=$(stat -c %Y $lastrandrf)
+else
+    lastrandrf=0
+fi
+touch $lastrandrf
+now=$(date +%s)
+let lastrandr+=2
+if [ "$lastrandr" -gt "$now" ]; then
+    echo "ignoring too fast repeated event."
+    exit
+fi
 
 custom_randr
