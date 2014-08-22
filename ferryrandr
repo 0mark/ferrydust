@@ -18,13 +18,13 @@ fi
 
 # ** fix options missing in config
 # 
-[ -z $POSITION] && POSITION="left-of"
+[ -z $POSITION ] && POSITION="left-of"
 # maximum number of outputs the viceo card can handle
-[ -z $MAX_ENABLED_OUTPUTS] && MAX_ENABLED_OUTPUTS=2
+[ -z $MAX_ENABLED_OUTPUTS ] && MAX_ENABLED_OUTPUTS=2
 # all available outputs
 [ -z $OUTPUTS] && OUTPUTS=$(xrandr |awk '$2 ~ /connected/ {print $1}')
 # your notebook LVDS monitor
-[ -z $DEFAULT_OUTPUT] && DEFAULT_OUTPUT=$(sed -ne 's/.*\(LVDS[^ ]*\).*/\1/p' <<<$OUTPUTS)
+[ -z $DEFAULT_OUTPUT ] && DEFAULT_OUTPUT=$(sed -ne 's/.*\(LVDS[^ ]*\).*/\1/p' <<< $OUTPUTS)
 # remove default from list
 OUTPUTS=${OUTPUTS/$DEFAULT_OUTPUT/}
 
@@ -36,11 +36,11 @@ NUM_CONNECTED=$(echo "$XRANDR" | grep " connected" | wc -l)
 default_randr() {
   # ** disable default when to many outputs are connected
   if [ $NUM_CONNECTED -gt $MAX_ENABLED_OUTPUTS ]; then
-    echo "More than $MAX_ENABLED_OUTPUTS displays connected, disabling LVDS."
+    echo "More than $MAX_ENABLED_OUTPUTS displays connected, disabling $DEFAULT_OUTPUT."
     xrandr --output $DEFAULT_OUTPUT --off
   else
     if [[ $XRANDR == *$DEFAULT_OUTPUT\ connected\ \(* ]]; then
-      echo "Setting LVDS to auto"
+      echo "Setting $DEFAULT_OUTPUT to auto"
       xrandr --output $DEFAULT_OUTPUT --auto
     fi
     LAST=$DEFAULT_OUTPUT
@@ -51,9 +51,12 @@ default_randr() {
   for CURRENT in $OUTPUTS; do
     if [[ $XRANDR == *$CURRENT\ connected*  ]]; then
       if [ $i -lt $MAX_ENABLED_OUTPUTS ]; then
-        if [[ $XRANDR == *$CURRENT\ connected\ \(* ]]; then
+        if [ ! -z "$LAST" ]; then
           echo "Setting $CURRENT to auto ($POSITION $LAST)"
           xrandr --output $CURRENT --auto --$POSITION $LAST
+        else
+          echo "Setting $CURRENT to auto"
+          xrandr --output $CURRENT --auto
         fi
         LAST=$CURRENT
       fi
