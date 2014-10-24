@@ -1,0 +1,41 @@
+# *** Apps
+termApp          = urxvtc
+browserApp       = dwb
+mixApp           = urxvtc -name mixApp -geometry 160x30 -fn 5x8 -fb 5x8 -e alsamixer
+editorApp        = subl
+wmApp            = dwmm
+fmApp            = tuxcmd
+wallApp          = ferrysparkle
+mailApp          = claws-mail
+statusApp        = s4km
+#netApp           = sudo netcfg-menu2
+keybindApp       = speckeysd /home/mark/.config/speckeys
+imgApp           = geeqie
+musicApp         = urxvtc -name musicApp -geometry 120x60 -fn 5x8 -fb 5x8 -e ncmpcpp -h 192.168.0.120
+
+# *** Config
+wmRestart        = true
+wallpaperPath    = /home/mark/Dateln/Bilder/Wallpaper/_fav/
+initFonts        = true
+kbmap            = us
+startDbus        = true
+#startKeychain    = true
+startGnomeKeyring = true
+sshAskpass       = /usr/lib/ssh/x11-ssh-askpass
+initRandr        = true
+randrDaemon      = xrr-events
+startCompositor  = xcompmgr &
+#startCompositor  = compton --backend glx --glx-use-copysubbuffermesa --glx-no-rebind-pixmap --glx-swap-method 1 --paint-on-overlay &
+#startConMan     = connman-applet
+alsaeqProfile    = default
+tryIntelVO       = false
+synergyscfg      = /home/mark/.config/synergy.cfg
+
+# *** dmenu
+font             = -*-terminus-*-*-*-*-12-*-*-*-*-*-*-*
+borderColor      = #242424
+bgColor          = #313131
+fgColor          = #aeaeae
+borderSelColor   = #082756
+bgSelColor       = #082756
+fgSelColor       = #ffffff

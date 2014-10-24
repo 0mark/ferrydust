@@ -22,11 +22,28 @@ fi
 # maximum number of outputs the viceo card can handle
 [ -z $MAX_ENABLED_OUTPUTS ] && MAX_ENABLED_OUTPUTS=2
 # all available outputs
-[ -z $OUTPUTS] && OUTPUTS=$(xrandr |awk '$2 ~ /connected/ {print $1}')
+[ -z $OUTPUTS] && OUTPUTS=$(xrandr | awk '$2 ~ /connected/ {print $1}')
 # your notebook LVDS monitor
 [ -z $DEFAULT_OUTPUT ] && DEFAULT_OUTPUT=$(sed -ne 's/.*\(LVDS[^ ]*\).*/\1/p' <<< $OUTPUTS)
+# restart synergy?
+[ -z $SYNERGYS_RESTART ] && SYNERGYS_RESTART=$(fd-getkey synergyscfg)
 # remove default from list
 OUTPUTS=${OUTPUTS/$DEFAULT_OUTPUT/}
+
+# ignore VIRTUAL* outputs from intel when either
+#  - its not actually used but marked as connected (on my setup, VIRTUAL1 is not used but connected,
+#    VIRTUAL2 is used and connected, VIRTUAL3 is not used and not connected)
+#  - the second X is not running or the real output on the second card is not connected
+#    which may happen after suspend or otherwise
+if [ ! -z $VIRTUAL_OUTPUT ]; then
+  [ -z "$VIRTUAL_OUTPUT_CONNECTED" -a $(ps -A | grep Xorg | wc -l) -gt 1 ] && VIRTUAL_OUTPUT_CONNECTED=$(DISPLAY=":$VIRTUAL_OUTPUT_DISPLAY" xrandr | grep "$VIRTUAL_OUTPUT connected" | wc -l)
+  UNCONNECTED=""
+  for CURRENT in $OUTPUTS; do
+    if [[ $CURRENT == *VIRTUAL* && ($VIRTUAL_OUTPUT_CONNECTED < 1 || $CURRENT != $VIRTUAL_OUTPUT_DISABLE_EXCEPT) ]]; then
+      UNCONNECTED="$UNCONNECTED $CURRENT"
+    fi
+  done
+fi
 
 # get info from xrandr
 XRANDR=$(xrandr)
@@ -46,10 +63,10 @@ default_randr() {
     LAST=$DEFAULT_OUTPUT
   fi
 
-  # ** set everything but internal
+  # ** set everything but internal or disabled virtual
   i=0
   for CURRENT in $OUTPUTS; do
-    if [[ $XRANDR == *$CURRENT\ connected*  ]]; then
+    if [[ $XRANDR == *$CURRENT\ connected* && $UNCONNECTED != *$CURRENT* ]]; then
       if [ $i -lt $MAX_ENABLED_OUTPUTS ]; then
         if [ ! -z "$LAST" ]; then
           echo "Setting $CURRENT to auto ($POSITION $LAST)"
@@ -100,3 +117,8 @@ if [ "$lastrandr" -gt "$now" ]; then
 fi
 
 custom_randr
+
+if [ ! -z "$SYNERGYS_RESTART" -a $(ps -A | grep synergys | wc -l) -gt 0 ]; then
+  killall synergys
+  synergys -c $SYNERGYS_RESTART
+fi

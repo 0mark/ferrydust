@@ -11,11 +11,15 @@ startdwm() {
 	else
 	    dwmm
 	fi
+	if fd-istrue tryIntelVO; then
+		sudo nvidia-disable.sh
+	fi
 	killall ferrycharm
 }
 
 if fd-haskey tryIntelVO; then
-	intel-virtual-output
+	#intel-virtual-output
+	sudo nvidia-enable.sh
 fi
 
 if fd-iftrue initRandr; then
@@ -116,14 +120,4 @@ fi
 # ** Run Autostart
 (sleep 1; cat ${XDG_CONFIG_HOME:-$HOME/.config}/ferrydust/autostart | egrep -v '^#' | sh) &
 
-echo "W"
-if fd-iftrue wmRestart; then
-  R=23
-  while [ $R -gt 0 ]; do
-    dwmm
-    R=$?
-    sleep 2
-  done
-else
-  dwmm
-fi
+wait

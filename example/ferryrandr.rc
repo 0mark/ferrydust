@@ -1,0 +1,71 @@
+# position on which new outputs should be added added
+# (left-of, right-of, above, below)
+#POSITION="left-of"
+
+# maximum number of outputs your viceo card can handle
+MAX_ENABLED_OUTPUTS=3
+
+# list of all available outputs
+#OUTPUTS=$(xrandr |awk '$2 ~ /connected/ {print $1}')
+
+# default device (usually LVDS or something)
+#DEFAULT_OUTPUT=$(sed -ne 's/.*\(LVDS[^ ]*\).*/\1/p' <<<$OUTPUTS)
+
+# if this value is not zero and synergys is running, it will be
+# restartet after the screens are set using its value as config file
+#SYNERGYS_RESTART=$(fd-getkey synergyscfg)
+
+
+# the output thats wired to the second card
+VIRTUAL_OUTPUT='HDMI-0'
+# the display the second X is running on
+VIRTUAL_OUTPUT_DISPLAY=8
+# the actually used virtual output
+VIRTUAL_OUTPUT_DISABLE_EXCEPT='VIRTUAL2'
+
+custom_randr() {
+    wppath=`fd-getkey wallpaperPath`
+
+    # With --verbose, xrandr will output the edid of your outputs it should
+    # be rather unique, so use it to detect specific setups
+    #
+    # In this example i use my own setup, whgich is arather borked optimus
+    # machine (intel and nvidia card in one notebook).
+    #  - LVDS1 is the internal display, wired to the intel card
+    #  - HDMI1 is a Displayport, wired to the intel card
+    #  - The actual HDMI port is wired to the nvidia card, which is then,
+    #    through black magic, mapped as VIRTUAL1
+
+    if [ $(xrandr -q --verbose | egrep '(00ffffffffffff001ab35405a3d60100)|(00ffffffffffff0006afed1500000000)' | wc -l) -eq 2 -a $(ps -A | grep Xorg | wc -l) -gt 1 ]; then
+        # Internal Display and Fujitsu Monitor on HDMI (intel card)
+        xrandr --output VIRTUAL1 --off --output VIRTUAL2 --mode VIRTUAL2.646-1600x1200 --output LVDS1 --right-of VIRTUAL2 --mode 1920x1080 --primary
+        sudo netcfg eth
+
+    elif [ $(xrandr -q --verbose | egrep '(00ffffffffffff000472280009056083)|(00ffffffffffff0006afed1500000000)' | wc -l) -eq 2 ]; then
+        # Internal Display and Acer Monitor on Displayport
+        xrandr --newmode "1280x720_60.00"   74.50  1280 1344 1472 1664  720 723 728 748 -hsync +vsync
+        xrandr --addmode LVDS1 "1280x720_60.00"
+        xrandr --output HDMI1 --mode 1920x1200 --output LVDS1 --left-of HDMI1 --mode "1280x720_60.00" --primary
+        sudo netcfg eth
+
+    elif [ $(xrandr -q --verbose | egrep '(00ffffffffffff001ab35405a3d60100)|(00ffffffffffff0006afed1500000000)' | wc -l) -eq 2 ]; then
+        # Internal Display and Fujitsu Monitor on Displayport
+        xrandr --output HDMI1 --mode 1600x1200 --output LVDS1 --left-of HDMI1 --mode 1920x1080 --primary
+        sudo netcfg eth
+
+    else
+        # Everything else
+
+        # if only the internal display is connected, use special wallpaper
+        if [ $(xrandr -q --verbose | egrep '00ffffffffffff0006afed1500000000' | wc -l) -eq 1 ]; then
+            wppath=/home/mark/Dateln/Bilder/Wallpaper/neu/lvds/
+        fi
+
+        # Use automagic configurator
+        default_randr
+    fi
+
+    if [ "$initialize" -ne 1 ]; then
+      fd-app wall $wppath &> /dev/null &
+    fi
+}
