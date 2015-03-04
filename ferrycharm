@@ -18,6 +18,7 @@ startdwm() {
 }
 
 if fd-haskey tryIntelVO; then
+	#intel-virtual-output
 	sudo nvidia-enable.sh
 fi
 

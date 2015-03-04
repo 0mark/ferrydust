@@ -10,3 +10,5 @@ fd-app term -name dwm-scratchpad --geometry 100x30 -title ScrachPad &
 # initial screens
 fd-app term -e screen -RR &
 fd-app term -e screen -RR &
+
+redshift -l 53.511285:10.177720 -t 6500:4500 &

@@ -11,7 +11,7 @@ statusApp        = s4km
 #netApp           = sudo netcfg-menu2
 keybindApp       = speckeysd /home/mark/.config/speckeys
 imgApp           = geeqie
-musicApp         = urxvtc -name musicApp -geometry 120x60 -fn 5x8 -fb 5x8 -e ncmpcpp -h 192.168.0.120
+musicApp         = urxvtc -name musicApp -geometry 120x60 -fn 5x8 -fb 5x8 -e ncmpcpp -h 192.168.0.200
 
 # *** Config
 wmRestart        = true
@@ -24,7 +24,7 @@ startDbus        = true
 startGnomeKeyring = true
 sshAskpass       = /usr/lib/ssh/x11-ssh-askpass
 initRandr        = true
-randrDaemon      = xrr-events
+randrDaemon      = srandrd /opt/bin/ferryrandr
 startCompositor  = xcompmgr &
 #startCompositor  = compton --backend glx --glx-use-copysubbuffermesa --glx-no-rebind-pixmap --glx-swap-method 1 --paint-on-overlay &
 #startConMan     = connman-applet
