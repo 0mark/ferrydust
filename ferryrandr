@@ -106,7 +106,7 @@ lastrandrf="${CPATH}/lastrandr"
 if [ -f "$lastrandrf" ]; then
     lastrandr=$(stat -c %Y $lastrandrf)
 else
-    lastrandrf=0
+    lastrandr=0
 fi
 touch $lastrandrf
 now=$(date +%s)

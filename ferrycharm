@@ -59,6 +59,7 @@ fi
 if fd-haskey kbmap; then
 	setxkbmap $(fd-getkey kbmap)
 fi
+
 # ** start DBUS
 if fd-iftrue startDbus; then
 	eval $(dbus-launch --auto-syntax --exit-with-session)

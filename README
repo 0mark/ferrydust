@@ -1,0 +1,8 @@
+TODO: README
+
+Dependencies:
+xorg-xrandr
+srandrd
+xorg-xset
+xorg-xrdb
+xcompmgr
