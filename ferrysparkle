@@ -14,16 +14,17 @@ $app =~ s/\n//g;
 #my $s=0;
 
 adddir($path);
-print "--\n";
 
 $|=1;
 #while ($s==0) {
-  #$exec="exec dash -c \"".$app." '".$imgs[rand($#imgs)]."'; sleep 10; ~/bin/chbg $path\"";
-  $exec=$app." '".$imgs[rand($#imgs)]."';";
-  print $exec."\n";
-  #$s=system
+  $exec=$app." '".$imgs[rand($#imgs)]."'";
+
+  pipe(READER, WRITER);
+  close(READER);
+  open STDOUT, ">&", \*WRITER or die $!;
+  open STDERR, ">&", \*WRITER or die $!;
+
   exec $exec;
-  #sleep (1200) if($s==0);
   #sleep(1200);
 #}
 

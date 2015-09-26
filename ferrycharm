@@ -37,12 +37,16 @@ fi
 # ** Init X11 Fonts
 if fd-iftrue initFonts; then
 	for dir in /usr/share/fonts/*; do
-		if [ "$dir" != "/usr/share/fonts/X11" ]; then
-		    xset +fp $dir
+		if [ "$dir" != "/usr/share/fonts/X11" -a -f "$dir/fonts.dir" ]; then
+			echo " * add font path $dir"
+			xset +fp $dir
 		fi
 	done;
 	for dir in /usr/share/fonts/X11/*; do
-	    xset +fp $dir
+		if [ -f "$dir/fonts.dir" ]; then
+			echo " * add font path $dir"
+			xset +fp $dir
+		fi
 	done;
 	xset fp rehash
 fi
@@ -69,10 +73,17 @@ startdwm &
 
 # ** start keychain
 if fd-iftrue startKeychain; then
+	[ -z "$HOSTNAME" ] && HOSTNAME=`uname -n`
 	if fd-haskey sshAskpass; then
 		export SSH_ASKPASS=$(fd-getkey sshAskpass)
 	fi
-	eval `keychain --eval --agents ssh id_rsa`
+	if fd-haskey keychainAgents; then
+		keychain --agents $(fd-getkey keychainAgents)
+	else
+		keychain
+	fi
+	[ -f $HOME/.keychain/$HOSTNAME-sh ] && . $HOME/.keychain/$HOSTNAME-sh
+	[ -f $HOME/.keychain/$HOSTNAME-sh-gpg ] && . $HOME/.keychain/$HOSTNAME-sh-gpg
 fi
 
 # ** start mate keyring

@@ -20,6 +20,7 @@ initFonts        = true
 kbmap            = us
 startDbus        = true
 #startKeychain    = true
+#keychainAgents   = ssh id_rsa
 #startMateKeyring = true
 startGnomeKeyring = true
 sshAskpass       = /usr/lib/ssh/x11-ssh-askpass
