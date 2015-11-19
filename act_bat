@@ -1,0 +1,28 @@
+#!/bin/bash
+
+#source ETCPREFIX/acpithings.rc
+
+ac="$(</sys/class/power_supply/AC/online)"
+
+if [ "$ac" -eq 0 ]; then
+    if [ -f /sys/class/power_supply/BAT0/charge_full ]; then
+        cap="$(</sys/class/power_supply/BAT0/charge_full)"
+        cur="$(</sys/class/power_supply/BAT0/charge_now)"
+        draw="$(</sys/class/power_supply/BAT0/current_now)"
+    else
+# TODO use correct files (enegergie...)
+        cap="$(</sys/class/power_supply/BAT0/charge_full)"
+        cur="$(</sys/class/power_supply/BAT0/charge_now)"
+        draw="$(</sys/class/power_supply/BAT0/current_now)"
+    fi
+
+    if [ "$cap" -gt 0 -a "$draw" -gt 0 ]; then
+        rem=$((($cur*100)/$cap))
+        rem=$((($cur*60)/$draw))
+    fi
+# TODO use config
+    if [ "$rem" -lt 5 ]; then
+        logger --id $$ -t acpistuff "Less than 5 min remaining, suspending now"
+        suspto disk
+    fi
+fi

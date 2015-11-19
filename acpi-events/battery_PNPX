@@ -1,0 +1,2 @@
+event=battery.*(PNP[A-Z0-9]+).*
+action=PREFIX/sbin/act_bat

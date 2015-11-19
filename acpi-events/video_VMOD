@@ -1,0 +1,2 @@
+event=video.*VMOD.*
+action=PREFIX/sbin/vmod

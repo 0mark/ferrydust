@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source ETCPREFIX/acpithings.rc
+
+max=$(cat $BRIGHT_PATH/max_brightness)
+step=$(($max/$BRIGHT_STEPS))
+cur=$(cat $BRIGHT_PATH/brightness)
+
+if [ "$1" = "down" ]; then
+    next=$(($cur-$step))
+    if [ $next -lt 1 ]; then
+        next=1
+    fi
+else
+    next=$(($cur+$step))
+    if [ $next -gt $max ]; then
+        next=$max
+    fi
+fi
+
+echo "$next" > $BRIGHT_PATH/brightness

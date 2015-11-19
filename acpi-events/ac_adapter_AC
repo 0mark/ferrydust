@@ -1,0 +1,2 @@
+event=ac_adapter.*(AC|ACAD|ADP0|ACPI).*
+action=

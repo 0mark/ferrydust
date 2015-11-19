@@ -1,0 +1,2 @@
+event=button.*(SLPB|SBTN).*
+action=PREFIX/sbin/suspto mem

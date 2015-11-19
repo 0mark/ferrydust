@@ -1,0 +1,26 @@
+#!/bin/bash
+
+source /usr/local/lib/acpi-functions
+
+un="$(prime_user)"
+
+
+case $4 in
+    00000001)
+        su $un -c 'DISPLAY=:0 fd-app vkbd &'
+# TODO use ferryvision or stuff and config
+        su $un -c 'DISPLAY=:0 xrandr --output LVDS1 --rotate inverted'
+# TODO use config
+        su $un -c 'DISPLAY=:0 xsetwacom set "Serial Wacom Tablet WACf004 stylus" rotate half'
+        ;;
+    00000000)
+# TODO use ferryvision or stuff and config
+        su $un -c 'DISPLAY=:0 xrandr --output LVDS1 --rotate normal'
+# TODO use config
+        su $un -c 'DISPLAY=:0 xsetwacom set "Serial Wacom Tablet WACf004 stylus" rotate none'
+        su $un -c 'killall $(basename $(fd-getkey vkbdApp))'
+        ;;
+    *)
+        logger "tabletmode -- $4"
+        ;;
+esac

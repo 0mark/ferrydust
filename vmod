@@ -1,0 +1,7 @@
+#!/bin/bash
+
+source PREFIX/lib/acpi-functions
+
+un="$(prime_user)"
+
+su $un -c 'DISPLAY=:0 fd-app randr&'

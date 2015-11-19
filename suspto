@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# TODO: fail on error!
+
+source ETCPREFIX/acpithings.rc
+
+function susprep {
+    logger -t suspend "sleeping down"
+    for A in $(ls /media/); do pumount $A; done;
+    $NET_DOWN
+    /usr/local/bin/uslock &
+    sleep 0.2
+    sync
+    logger -t suspend "sleeping now"
+}
+
+function suspres {
+    logger -t suspend "waking up"
+    $NET_UP
+    if [ "$(</sys/class/power_supply/AC/online)" -ne 1 ]; then
+        #logger -t suspend "****trying powerdown"
+        $(sleep 5; /usr/local/sbin/powerdown) &
+    else
+        #logger -t suspend "****trying powerup"
+        $(sleep 5; /usr/local/sbin/powerup) &
+    fi
+    logger -t suspend "woken up"
+}
+
+to=$1
+
+if [ "$1" == "hybrid" -o "$1" == "disk" ]; then
+    match=`cat /proc/version | grep "$(ls -c /lib/modules | head -n 1)" | wc -l`
+    if [ "$match" -lt 1 ]; then
+        if [ "$1" == "hybrid" ]; then
+            logger -t suspend "Kernel Version mismatch, can't s2h, falling back to s2r."
+            to="mem"
+        else
+            logger -t suspend "Kernel Version mismatch, can't s2d."
+            exit
+        fi
+    fi
+fi
+
+susprep
+if [ "$to" == "disk" ]; then
+    echo -n disk >/sys/power/state
+elif [ "$to" == "hybrid" ]; then
+    now="$(date -u +%s)"
+    rtcwake -u -m mem -s "$HYBRID_SUSPEND_TIMEOUT"
+    dif="$(($(date -u +%s) - $now))"
+    if (( $dif >= "$HYBRID_SUSPEND_TIMEOUT" )); then
+        sleep 5
+        echo -n disk >/sys/power/state
+        # TODO: s2r on fail
+    fi
+else
+    echo -n mem >/sys/power/state
+fi
+suspres

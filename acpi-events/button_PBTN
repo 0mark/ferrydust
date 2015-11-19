@@ -1,0 +1,2 @@
+event=button.*(PBTN|PWRF).*
+action=

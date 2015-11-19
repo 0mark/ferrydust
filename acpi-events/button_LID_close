@@ -1,0 +1,2 @@
+event=button.*(LID).*close
+action=PREFIX/sbin/sitnol close

@@ -1,0 +1,2 @@
+event=video.*TBLT(.*)
+action=/usr/local/sbin/tabletmode %e

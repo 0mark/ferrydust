@@ -1,0 +1,2 @@
+event=button.*VOLUP.*
+action=/usr/bin/amixer sset Master 1+
