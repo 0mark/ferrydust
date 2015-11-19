@@ -23,7 +23,7 @@ if fd-haskey tryIntelVO; then
 fi
 
 if fd-iftrue initRandr; then
-	ferryrandr initialize
+	ferryglamour initialize
 fi
 
 if fd-haskey randrDaemon; then

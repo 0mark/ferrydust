@@ -12,8 +12,8 @@ custom_randr() { default_randr "$@"; }
 
 # ** load config
 CPATH="${XDG_CONFIG_HOME:-$HOME/.config}/ferrydust"
-if [ -f "$CPATH/ferryrandr.rc" ]; then
-  source "$CPATH/ferryrandr.rc"
+if [ -f "$CPATH/ferryglamour.rc" ]; then
+  source "$CPATH/ferryglamour.rc"
 fi
 
 # ** fix options missing in config
