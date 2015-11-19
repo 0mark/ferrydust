@@ -9,10 +9,11 @@ UDEVPREFIX="$LIBPREFIX/udev"
 install:
 	@echo "installing scripts to ${BINPREFIX}"
 	@mkdir -p ${DESTDIR}${PREFIX}/bin
-	@cp -f fd-* ferrycharm ferrysparkle ferryrandr ${DESTDIR}${BINPREFIX}
+	@cp -f fd-* ferrycharm ferrysparkle ferryrandr dmount dumount ${DESTDIR}${BINPREFIX}
 	@sed "s#PREFIX#${PREFIX}#g" < powernow > ${DESTDIR}${BINPREFIX}/powernow
 
 	@echo "installing scripts to ${SBINPREFIX}"
+	@cp -f rdbks ${DESTDIR}${SBINPREFIX}
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g;s#PREFIX#${PREFIX}#g" < powerdown > ${DESTDIR}${SBINPREFIX}/powerdown
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g;s#PREFIX#${PREFIX}#g" < powerup > ${DESTDIR}${SBINPREFIX}/powerup
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/setbat > ${DESTDIR}${SBINPREFIX}/setbat

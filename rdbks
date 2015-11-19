@@ -1,0 +1,27 @@
+#!/bin/sh
+
+##### CONFIG
+
+SRC=( "/home/mark" "/etc" )
+BACKUPDIR=$1
+
+#### DO NOT TOUCH
+BACK=$(pwd)
+if [ -d "${BACKUPDIR}" ]; then
+    cd ${BACKUPDIR}
+
+    for i in ${SRC[@]}; do
+        mkdir -p "./backup${i}"
+        PARM="--preserve-numerical-ids --exclude-device-files --exclude-fifos"
+        if [ -f $i/.exclude ]; then PARM="$PARM --exclude-globbing-filelist ${i}/.exclude"; fi
+        rdiff-backup $PARM -b "${i}" "./backup${i}" &> /var/log/rdbks.log
+        if [ $? -gt 0 ]; then
+            logger -t "rdbks" "Backup from $i to $BACKUPDIR failed!"
+        fi
+    done
+
+    cd $BACK
+    sleep 1
+else
+    logger -t "rdbks" "Did not found $BACKUPDIR"
+fi
