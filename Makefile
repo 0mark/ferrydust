@@ -19,7 +19,7 @@ install:
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/setbat > ${DESTDIR}${SBINPREFIX}/setbat
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/setbright > ${DESTDIR}${SBINPREFIX}/setbright
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/sitnol > ${DESTDIR}${SBINPREFIX}/sitnol
-	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/suspto > ${DESTDIR}${SBINPREFIX}/suspto
+	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/ferryslumber > ${DESTDIR}${SBINPREFIX}/ferryslumber
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/vmod > ${DESTDIR}${SBINPREFIX}/vmod
 
 	@echo "installing libs to ${LIBPREFIX}"

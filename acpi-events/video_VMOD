@@ -1,2 +1,2 @@
 event=video.*VMOD.*
-action=PREFIX/sbin/vmod
+action=SBINPREFIX/vmod

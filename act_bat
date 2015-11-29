@@ -23,6 +23,6 @@ if [ "$ac" -eq 0 ]; then
 # TODO use config
     if [ "$rem" -lt 5 ]; then
         logger --id $$ -t acpistuff "Less than 5 min remaining, suspending now"
-        suspto disk
+        ferryslumber disk
     fi
 fi

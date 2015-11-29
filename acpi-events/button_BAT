@@ -1,2 +1,2 @@
 event=button.*(BAT).*
-action=PREFIX/sbin/setbat
+action=SBINPREFIX/setbat

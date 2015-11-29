@@ -1,2 +1,2 @@
 event=button.*(LID).*open
-action=PREFIX/sbin/sitnol open
+action=SBINPREFIX/sitnol open
