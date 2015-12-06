@@ -1,2 +1,2 @@
 event=battery.*(BAT[0-9]+).*
-action=SBINPREFIX/act_bat
+action=SBINPREFIX/fd-ae-battery
