@@ -1,26 +1,30 @@
 #!/usr/bin/env bash
 # powerdown-functions
 
+PATH="$PATH:/sbin:/usr/sbin:/usr/local/sbin"
+
+me="$(basename $0)"
+
 shopt -s nullglob extglob
 
 # turn on kernel options
 opt() {
     [[ -f "$1" ]] || return
-    tee "$1" <<<"$2" &>/dev/null || echo "[powerdown] cannot write $2 to $1"
+    tee "$1" <<<"$2" &>/dev/null || echo "[$me] cannot write $2 to $1"
 }
 
 # unload kernel module
 unload_mod() {
     has_mod "$1" || return
     mod_loaded "$1" || return
-    modprobe -r "$1" &>/dev/null || echo "[powerdown] cannot unload module $1"
+    modprobe -r "$1" &>/dev/null || echo "[$me] cannot unload module $1"
 }
 
 # load kernel module
 load_mod() {
     has_mod "$1" || return
     mod_loaded "$1" && return
-    modprobe "$1" &>/dev/null || echo "[powerdown] cannot load module $1"
+    modprobe "$1" &>/dev/null || echo "[$me] cannot load module $1"
 }
 
 # module exists
@@ -43,7 +47,7 @@ num_scale() {
 
 # command
 run() {
-    "$@" &> /dev/null || echo "[powerdown] cannot run $@"
+    "$@" &> /dev/null || echo "[$me] cannot run $@"
 }
 
 has_bat() {
@@ -57,7 +61,7 @@ has_bat() {
 # get current power usage
 display_power() {
     if ! has_bat; then
-        echo "[powerdown] no battery"
+        echo "[$me] no battery"
         return
     fi
     local bat
@@ -68,7 +72,7 @@ display_power() {
         else
             watt="$(bc <<< "scale=3; $(< "$bat/current_now") * $(< "$bat/voltage_now") / 1000000000000")"
         fi
-        echo "[powerdown] $(basename "$bat") using $watt watts"
+        echo "[$me] $(basename "$bat") using $watt watts"
     done
 }
 

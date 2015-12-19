@@ -7,12 +7,14 @@ if [[ $EUID != 0 ]]; then
     exit 1
 fi
 
+logger -t powerdown "disabling power saving"
+
 source PREFIX/lib/powerdown-functions
 source ETCPREFIX/powerdown/conf
 
 # diable nvidia cards
 if [ "$BBSWITCH" == "on" ]; then
-    if [ -f /proc/acpi/bbswitch ]; then
+    if [ -f /proc/acpi/bbwitch ]; then
         echo ON > /proc/acpi/bbswitch
     fi
 fi

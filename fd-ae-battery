@@ -24,5 +24,7 @@ if [ "$ac" -eq 0 ]; then
     if [ "$rem" -lt 5 ]; then
         logger --id $$ -t acpistuff "Less than 5 min remaining, suspending now"
         ferryslumber disk
+    else
+        logger --id $$ -t acpistuff "$rem min remaining. Nice, doing nothing!"
     fi
 fi

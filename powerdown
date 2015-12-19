@@ -7,12 +7,14 @@ if [[ $EUID != 0 ]]; then
     exit 1
 fi
 
+logger -t powerdown "enabling power saving"
+
 source PREFIX/lib/powerdown-functions
 source ETCPREFIX/powerdown/conf
 
-# diable nvidia cards
+# disable nvidia cards
 if [ "$BBSWITCH" == "true" -o "$BBSWITCH" == "on" ]; then
-    if [ -f /proc/acpi/bbswitch ]; then
+    if [ -f /proc/acpi/bbwitch ]; then
         echo OFF > /proc/acpi/bbswitch
     fi
 fi
@@ -109,6 +111,9 @@ fi
 if [ "$NET" == "true" ]; then
     for i in $(iw dev | awk '$1 == "Interface" { print $2 }'); do
         run iw dev "$i" set power_save on;
+        run ethtool -s "$i" wol d
+    done
+    for i in $(iwconfig 2>&1 | grep -P '^(?!lo)[a-zA-Z0-9]+\s*no' | awk '{print $1}'); do
         run ethtool -s "$i" wol d
     done
 fi

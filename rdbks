@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 ##### CONFIG
-
+# TODO use config
 SRC=( "/home/mark" "/etc" )
-BACKUPDIR=$1
+BACKUPDIR="$1/backup/$(hostname)"
 
 #### DO NOT TOUCH
 BACK=$(pwd)
@@ -11,10 +11,10 @@ if [ -d "${BACKUPDIR}" ]; then
     cd ${BACKUPDIR}
 
     for i in ${SRC[@]}; do
-        mkdir -p "./backup${i}"
+        mkdir -p ".${i}"
         PARM="--preserve-numerical-ids --exclude-device-files --exclude-fifos"
         if [ -f $i/.exclude ]; then PARM="$PARM --exclude-globbing-filelist ${i}/.exclude"; fi
-        rdiff-backup $PARM -b "${i}" "./backup${i}" &> /var/log/rdbks.log
+        rdiff-backup $PARM -b "${i}" "./${i}" &> /var/log/rdbks.log
         if [ $? -gt 0 ]; then
             logger -t "rdbks" "Backup from $i to $BACKUPDIR failed!"
         fi

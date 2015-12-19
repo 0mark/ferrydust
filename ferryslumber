@@ -53,6 +53,7 @@ elif [ "$to" == "hybrid" ]; then
         sleep 5
         echo -n disk >/sys/power/state
         # TODO: s2r on fail
+        # TODO: kill lock else
     fi
 else
     echo -n mem >/sys/power/state
