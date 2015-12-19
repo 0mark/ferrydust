@@ -12,7 +12,7 @@ source ETCPREFIX/powerdown/conf
 
 # diable nvidia cards
 if [ "$BBSWITCH" == "true" -o "$BBSWITCH" == "on" ]; then
-    if [ -f /proc/acpi/bbwitch ]; then
+    if [ -f /proc/acpi/bbswitch ]; then
         echo OFF > /proc/acpi/bbswitch
     fi
 fi
