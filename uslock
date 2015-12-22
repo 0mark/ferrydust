@@ -1,0 +1,10 @@
+#!/bin/bash
+
+source /usr/local/lib/acpi-functions
+
+un="$(prime_user)"
+
+
+if [ "$un" != "" ]; then
+    $(su $un -c 'DISPLAY=:0 fd-app lock')
+fi

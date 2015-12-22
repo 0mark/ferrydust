@@ -21,6 +21,7 @@ install:
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/sitnol > ${DESTDIR}${SBINPREFIX}/sitnol
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/ferryslumber > ${DESTDIR}${SBINPREFIX}/ferryslumber
 	@sed "s#ETCPREFIX#${ETCPREFIX}#g" < scripts/vmod > ${DESTDIR}${SBINPREFIX}/vmod
+	@sed "s#ETCPREFIX#${LIBPREFIX}#g" < scripts/uslock > ${DESTDIR}${LIBPREFIX}/uslock
 
 	@echo "installing libs to ${LIBPREFIX}"
 	install -D powerdown-functions ${DESTDIR}${LIBPREFIX}/powerdown-functions
