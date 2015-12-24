@@ -1,0 +1,13 @@
+#!/bin/bash
+
+prime_user() {
+    pids=$(cat /etc/passwd | egrep ":x:[0-9]{4,}" | cut -d ":" -f 3 | tr "\n" " ")
+    for pid in $pids; do
+        X=$(ps U $pid | grep X | wc -l)
+        if [ $X -gt 0 ]; then
+            echo "$(grep :$pid: /etc/passwd | cut -d : -f 1)"
+            exit 0
+        fi
+    done
+    exit 1
+}
