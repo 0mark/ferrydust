@@ -1,4 +1,0 @@
-#!/bin/sh
-# Exists 0 if the key $1 is true
-
-test "`fd-getkey $1`" = "true" && { exit 0; } || { exit 1; }

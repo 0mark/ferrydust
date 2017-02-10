@@ -1,0 +1,23 @@
+BRIGHT_PATH="/sys/class/backlight/intel_backlight"
+BRIGHT_STEPS=8
+
+CHARGE_START_HIGH=81
+CHARGE_END_HIGH=95
+CHARGE_START_LOW=60
+CHARGE_END_LOW=80
+
+NET_DOWN="/usr/local/bin/quicklan down"
+NET_UP=""
+
+MOUNT_DEVS=( "sd" "mmcblk" )
+MOUNT_BLOCK=( "sda" )
+
+BACKUP_SRC=( "/home/mark" "/etc" )
+BACKUP_SUBDIR="backup"
+
+TABLET_STRING="Serial Wacom Tablet WACf004 stylus"
+TABLE_ROTATE=(none half)
+TABLET_RANDR_STRING="lvds1"
+TABLET_RANDR_ROTATE=(normale inverted)
+
+SUSPEND_HYBRID=false

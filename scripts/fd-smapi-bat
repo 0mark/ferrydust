@@ -1,0 +1,32 @@
+#!SHELL_FULL
+
+source ETCPREFIX/ferrydust/system.rc
+
+# TODO multiple batteries
+
+case "$1" in
+    low|lo)
+		mode='low'
+		;;
+	high|hi)
+		mode='high'
+		;;
+	*)
+		sct=$(cat /sys/devices/platform/smapi/BAT0/start_charge_thresh)
+		if [ "$sct" -lt 81 ]; then
+			mode='high'
+		else
+			mode='low'
+		fi
+		;;
+esac
+
+if [ "$mode" == 'high' ]; then
+    fd-unotify -u low -i /usr/share/icons/Adwaita/16x16/status/battery-low-charging.png "$CHARGE_START_HIGH ... $CHARGE_END_HIGH"
+    echo $CHARGE_START_HIGH > /sys/devices/platform/smapi/BAT0/start_charge_thresh
+    echo $CHARGE_END_HIGH > /sys/devices/platform/smapi/BAT0/stop_charge_thresh
+else
+    fd-unotify -u low -i /usr/share/icons/Adwaita/16x16/status/battery-low-charging.png "$CHARGE_START_LOW ... $CHARGE_END_LOW"
+    echo $CHARGE_START_LOW > /sys/devices/platform/smapi/BAT0/start_charge_thresh
+    echo $CHARGE_END_LOW > /sys/devices/platform/smapi/BAT0/stop_charge_thresh
+fi

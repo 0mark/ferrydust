@@ -1,4 +1,7 @@
-#!/bin/dash
+#!SHELL_FULL
+
+export XDG_DATA_DIRS="$XDG_DATA_DIRS:/usr/share"
+export QT_STYLE_OVERRIDE=gtk
 
 startdwm() {
 	if fd-iftrue wmRestart; then
@@ -29,10 +32,6 @@ fi
 if fd-haskey randrDaemon; then
 	fd-getkey randrDaemon | sh
 fi
-
-# TODO:
-# Font stuff seems to be crux centric [ works on arch too, i guess ]
-# Compositing and other stuff is not configurable
 
 # ** Init X11 Fonts
 if fd-iftrue initFonts; then

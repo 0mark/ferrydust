@@ -1,40 +1,46 @@
 # *** Apps
 termApp          = urxvtc
-browserApp       = dwb
-mixApp           = urxvtc -name mixApp -geometry 160x30 -fn 5x8 -fb 5x8 -e alsamixer
-editorApp        = subl
+browserApp       = palemoon
+mixApp           = urxvtc -name mixApp -geometry 160x30 -e alsamixer
+editorApp        = subl3
 wmApp            = dwmm
 fmApp            = tuxcmd
 wallApp          = ferrysparkle
-mailApp          = claws-mail
+mailApp          = sylpheed
 statusApp        = s4km
 #netApp           = sudo netcfg-menu2
 keybindApp       = speckeysd /home/mark/.config/speckeys
 imgApp           = geeqie
-musicApp         = urxvtc -name musicApp -geometry 120x60 -fn 5x8 -fb 5x8 -e ncmpcpp -h 192.168.0.200
+musicApp         = urxvtc -name musicApp -geometry 120x60 -e ncmpcpp -h rennschnecke
+randrApp         = arandr
+lockApp          = csxlock -b #000000 -o #777777
+#vkbdApp          = svkbd-en -d
 
 # *** Config
 wmRestart        = true
-wallpaperPath    = /home/mark/Dateln/Bilder/Wallpaper/_fav/
+wallpaperPath    = /home/mark/Dateln/Bilder/wallpaper/
 initFonts        = true
-kbmap            = us
+#kbmap            = -layout gb -option compose:caps
 startDbus        = true
 #startKeychain    = true
+#keychainAgents   = ssh,gpg
 #keychainAgents   = ssh id_rsa
+#keychainAgents   = ssh,gpg id_rsa URKEYID
+#keychainOpts     = --noask
 #startMateKeyring = true
 startGnomeKeyring = true
 sshAskpass       = /usr/lib/ssh/x11-ssh-askpass
 initRandr        = true
-randrDaemon      = srandrd /opt/bin/ferryrandr
+randrDaemon      = srandrd $(which ferryglamour)
 startCompositor  = xcompmgr &
 #startCompositor  = compton --backend glx --glx-use-copysubbuffermesa --glx-no-rebind-pixmap --glx-swap-method 1 --paint-on-overlay &
 #startConMan     = connman-applet
-alsaeqProfile    = default
-tryIntelVO       = false
-synergyscfg      = /home/mark/.config/synergy.cfg
+#alsaeqProfile    = default
+#tryIntelVO       = false
+#synergyscfg      = /home/mark/.config/synergy.cfg
 
 # *** dmenu
-font             = -*-terminus-*-*-*-*-12-*-*-*-*-*-*-*
+font             = Terminus:size=8
 borderColor      = #242424
 bgColor          = #313131
 fgColor          = #aeaeae

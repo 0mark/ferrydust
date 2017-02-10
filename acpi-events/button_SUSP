@@ -1,2 +1,2 @@
 event=button.*(SUSP).*
-action=SBINPREFIX/ferryslumber disk
+action=SBINPREFIX/fd-suspend disk

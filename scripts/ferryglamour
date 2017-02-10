@@ -1,6 +1,4 @@
-#!/bin/bash
-
-# TODO rename ferryvision
+#!SHELL_FULL
 
 initialize=0
 
@@ -26,7 +24,9 @@ fi
 # all available outputs
 [ -z $OUTPUTS] && OUTPUTS=$(xrandr | awk '$2 ~ /connected/ {print $1}')
 # your notebook LVDS monitor
-[ -z $DEFAULT_OUTPUT ] && DEFAULT_OUTPUT=$(sed -ne 's/.*\(LVDS[^ ]*\).*/\1/p' <<< $OUTPUTS)
+[ -z $DEFAULT_OUTPUT_NAME ] && DEFAULT_OUTPUT_NAME="LVDS"
+[ -z $DEFAULT_OUTPUT ] && DEFAULT_OUTPUT=$(sed -ne 's/.*\('$DEFAULT_OUTPUT_NAME'[^ ]*\).*/\1/p' <<< $OUTPUTS)
+
 # restart synergy?
 [ -z $SYNERGYS_RESTART ] && SYNERGYS_RESTART=$(fd-getkey synergyscfg)
 # remove default from list
@@ -48,7 +48,7 @@ if [ ! -z $VIRTUAL_OUTPUT ]; then
 fi
 
 # get info from xrandr
-XRANDR=$(xrandr)
+XRANDR=$(xrandr | tr "\n" " ")
 # number of actually connected outputs
 NUM_CONNECTED=$(echo "$XRANDR" | grep " connected" | wc -l)
 
@@ -58,7 +58,7 @@ default_randr() {
     echo "More than $MAX_ENABLED_OUTPUTS displays connected, disabling $DEFAULT_OUTPUT."
     xrandr --output $DEFAULT_OUTPUT --off
   else
-    if [[ $XRANDR == *$DEFAULT_OUTPUT\ connected\ \(* ]]; then
+    if [[ $XRANDR == *$DEFAULT_OUTPUT\ connected\ * ]]; then
       echo "Setting $DEFAULT_OUTPUT to auto"
       xrandr --output $DEFAULT_OUTPUT --auto
     fi
@@ -67,8 +67,9 @@ default_randr() {
 
   # ** set everything but internal or disabled virtual
   i=0
+
   for CURRENT in $OUTPUTS; do
-    if [[ $XRANDR == *$CURRENT\ connected* && $UNCONNECTED != *$CURRENT* ]]; then
+    if [[ $XRANDR == *\ $CURRENT\ connected* && $UNCONNECTED != *$CURRENT* ]]; then
       if [ $i -lt $MAX_ENABLED_OUTPUTS ]; then
         if [ ! -z "$LAST" ]; then
           echo "Setting $CURRENT to auto ($POSITION $LAST)"

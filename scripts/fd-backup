@@ -1,0 +1,29 @@
+#!SHELL_FULL
+
+source ETCPREFIX/ferrydust/system.rc
+
+BACKUPDIR="${1}/${BACKUP_SUBDIR}/$(hostname)"
+
+#### DO NOT TOUCH
+BACK=$(pwd)
+if [ -d "${BACKUPDIR}" ]; then
+    cd ${BACKUPDIR}
+
+    for i in ${BACKUP_SRC[@]}; do
+        logger -t "fd-backup" "Starting backup from $i to $BACKUPDIR"
+        mkdir -p ".${i}"
+        PARM="--preserve-numerical-ids --exclude-device-files --exclude-fifos"
+        if [ -f $i/.exclude ]; then PARM="$PARM --exclude-globbing-filelist ${i}/.exclude"; fi
+        rdiff-backup $PARM -b "${i}" "./${i}" &> /var/log/fd-backup.log
+        if [ $? -gt 0 ]; then
+            logger -t "fd-backup" "Backup from $i to $BACKUPDIR failed!"
+        else
+            logger -t "fd-backup" "Backup from $i to $BACKUPDIR done!"
+        fi
+    done
+
+    cd $BACK
+    sleep 1
+else
+    logger -t "fd-backup" "Did not found $BACKUPDIR"
+fi

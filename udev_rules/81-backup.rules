@@ -1,0 +1,2 @@
+SUBSYSTEM=="block", ACTION=="add", ENV{ID_FS_UUID}=="9016-4EF8", RUN+="/bin/mkdir -p /mnt/backup", RUN+="/bin/mount /dev/%k /mnt/backup", RUN+="/bin/sh -c 'fd-backup /mnt/backup &> /dev/null &'"
+SUBSYSTEM=="block", ACTION=="remove", ENV{ID_FS_UUID}=="9016-4EF8", RUN+="/bin/killall fd-backup", RUN+="/bin/umount /mnt/backup", RUN+="rmdir /mnt/backup"

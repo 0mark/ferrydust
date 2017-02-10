@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ETCPREFIX/acpithings.rc
+source ETCPREFIX/ferrydust/system.rc
 
 max=$(cat $BRIGHT_PATH/max_brightness)
 step=$(($max/$BRIGHT_STEPS))

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!SHELL_FULL
 
 prime_user() {
     pids=$(cat /etc/passwd | egrep ":x:[0-9]{4,}" | cut -d ":" -f 3 | tr "\n" " ")
@@ -10,4 +10,8 @@ prime_user() {
         fi
     done
     exit 1
+}
+
+display_by_username() {
+	ps au | grep -e "^$1.*/usr/bin/X\s\+:[0-9]\+" | sed 's#.*/usr/bin/X\s\+\(:[0-9]\+\).*#\1#g'
 }

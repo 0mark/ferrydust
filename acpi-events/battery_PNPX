@@ -1,2 +1,2 @@
 event=battery.*(PNP[A-Z0-9]+).*
-action=SBINPREFIX/fd-ae-battery
+action=SBINPREFIX/fd-lowbat

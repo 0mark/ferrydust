@@ -1,0 +1,385 @@
+#!SHELL_FULL
+
+# diable nvidia cards
+bbswitch() {
+    if [ "$BBSWITCH" == "true" -o "$BBSWITCH" == "on" ]; then
+        if [ -f /proc/acpi/bbwitch ]; then
+            if [ "$1" == "now" ]; then
+                dump /proc/acpi/bbwitch
+            else
+                echo $1 > /proc/acpi/bbswitch
+            fi
+        fi
+    fi
+}
+
+# bus ... seems to be eeeeeevil
+bus() {
+    if [ "$BUS" == "true" ]; then
+        local i
+        for i in /sys/bus/*/devices/*/power/control; do
+            if [ "$1" == "now" ]; then
+                dump $i
+            else
+                opt "$i" $1;
+            fi
+        done
+    fi
+}
+
+# usb autosuspend
+usb() {
+    local i
+
+    if [ "$USB" == "true" ]; then
+        if [ "$USB_autosuspend" == "true" ]; then
+            for i in /sys/bus/usb/devices/*/power/autosuspend; do
+                if [ "$1" == "now" ]; then
+                    dump /proc/acpi/bbwitch
+                else
+                    opt "$i" "$1";
+                fi
+            done
+        fi
+        if [ "$USB_powersave" == "true" -a "$BUS" == "false" ]; then
+            for i in /sys/bus/usb/devices/*/power/control; do
+                if [ "$1" == "now" ]; then
+                    dump /proc/acpi/bbwitch
+                else
+                    opt "$i" on;
+                fi
+            done
+            for i in "/sys/bus/usb/devices/+([^:])"; do
+                if [ "$1" == "now" ]; then
+                    dump /proc/acpi/bbwitch
+                else
+                    is_usb_hid "$usbdev" && opt $usbdev/power/control on || opt $usbdev/power/control "$2"
+                fi
+            done
+        fi
+
+    fi
+}
+
+# nmi_watchdog
+nmi() {
+    if [ "$NMI" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            dump /proc/sys/kernel/nmi_watchdog
+        else
+            opt /proc/sys/kernel/nmi_watchdog $1
+        fi
+    fi
+}
+
+# cpu
+cpu() {
+    if [ "$CPU" == "true" ]; then
+        if [ ! -z "$1" ]; then
+            case "$1" in
+                powersave|ps|psafe) CPU_GOV="powersave" ;;
+                ondemand|od) CPU_GOV="ondemand" ;;
+                conservative|cv) CPU_GOV="conservative" ;;
+                *) CPU_GOV="ondemand" ;;
+            esac
+            for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+                if [ "$1" == "now" ]; then
+                    dump $i
+                else
+                    opt "$i" $CPU_GOV;
+                fi
+            done
+        fi
+        if [ ! -z "$2" ]; then
+            if [ "$2" -gt 0 -a "$2" -lt 6 ]; then
+                for i in /sys/class/thermal/cooling_device*; do
+                    if [ "$1" == "now" ]; then
+                        dump $i/cur_state
+                    else
+                        # FIXME bad scaling i think
+                        opt "$i/cur_state" "$(num_scale "$i/max_state" $2)";
+                    fi
+                done
+            fi
+        fi
+    fi
+}
+
+# aspm
+aspm() {
+    if [ "$ASPM" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            dump /sys/module/pcie_aspm/parameters/policy
+        else
+            opt /sys/module/pcie_aspm/parameters/policy $1
+        fi
+    fi
+}
+
+# kernel write mode
+vm() {
+    if [ "$VM" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            dump /proc/sys/vm/laptop_mode
+            dump /proc/sys/vm/dirty_ratio
+            dump /proc/sys/vm/dirty_background_ratio
+            dump /proc/sys/vm/dirty_expire_centisecs
+            dump /proc/sys/vm/dirty_writeback_centisecs
+        else
+            opt /proc/sys/vm/laptop_mode $1
+            opt /proc/sys/vm/dirty_ratio $2
+            opt /proc/sys/vm/dirty_background_ratio $3
+            opt /proc/sys/vm/dirty_expire_centisecs $4
+            opt /proc/sys/vm/dirty_writeback_centisecs $5
+        fi
+    fi
+}
+
+# disk
+disk() {
+    if [ "$DISK" == "true" ]; then
+        if [ "$DISK_link_pm" == "true" ]; then
+            for i in /sys/class/scsi_host/host*/link_power_management_policy; do
+                if [ "$1" == "now" ]; then
+                    dump $i
+                else
+                    opt "$i" $1;
+                fi
+            done
+        fi
+        if [ "$DISK_mount_options" == "true" ]; then
+            for dev in $(awk '/^\/dev\/sd.*ext[0-9]/ {print $1}' /etc/mtab); do
+                run mount -o remount,$2 "$dev";
+                # TODO: now
+            done
+            for dev in $(awk '/^\/dev\/sd/ {print $1}' /etc/mtab); do
+                if [ "$1" == "now" ]; then
+                    echo " -> $dev readahead: "$(blockdev --getra "$dev")
+                else
+                    run blockdev --setra $3 "$dev";
+                fi
+            done
+        fi
+        if [ "$DISK_spindown" != "" ]; then
+            for dev in $DISK_spindown; do
+                if [ "$1" != "now" -a -e "$dev" ]; then
+                    run hdparm -B $4 -S $5 "$dev";
+                fi
+            done
+        fi
+    fi
+}
+
+# sound card
+sound() {
+    if [ "$SOUND" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            dump /sys/module/snd_hda_intel/parameters/power_save
+            dump /sys/module/snd_hda_intel/parameters/power_save_controller
+            dump /sys/module/snd_ac97_codec/parameters/power_save
+        else
+            opt /sys/module/snd_hda_intel/parameters/power_save $1
+            opt /sys/module/snd_hda_intel/parameters/power_save_controller $2
+            opt /sys/module/snd_ac97_codec/parameters/power_save $3
+        fi
+    fi
+}
+
+# net
+net() {
+    if [ "$NET" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            for i in $(iw dev | awk '$1 == "Interface" { print $2 }'); do display_wireless "$i"; done
+            # TODO: wol
+            exit
+        fi
+        for i in $(iw dev | awk '$1 == "Interface" { print $2 }'); do
+            if [ "$1" == "now" ]; then
+                display_wireless "$i";
+                # TODO: ethtool now
+            else
+                run iw dev "$i" set power_save $1;
+                run ethtool -s "$i" wol d
+            fi
+        done
+        # TODO: ac mode
+        for i in $(iwconfig 2>&1 | grep -P '^(?!lo)[a-zA-Z0-9]+\s*no' | awk '{print $1}'); do
+            run ethtool -s "$i" wol d
+            # TODO: now
+        done
+    fi
+}
+
+# backlight
+backlight() {
+    if [ "$BACKLIGHT" == "true" ] ; then
+        if [ "$1" == "now" ]; then
+            # TODO: use scaling
+            for i in /sys/class/backlight/*; do dump "$i/brightness"; done
+            exit
+        fi
+        for i in /sys/class/backlight/${BACKLIGHT_type}*; do 
+            max_brightness=$(cat $i/max_brightness)
+            opt "$i/brightness" "$(num_scale "$i/max_brightness" $1)";
+        done
+    fi
+}
+
+# webcam
+webcam() {
+    if [ "$WEBCAM" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            display_module uvcvideo
+            display_module nouveau
+            exit
+        fi
+        # TODO: propper else
+        if [ "$1" == "off" ]; then
+            unload_mod uvcvideo
+            unload_mod videodev
+        else
+            load_mod uvcvideo
+            load_mod videodev
+        fi
+    fi
+}
+
+# bluetooth
+bluetooth() {
+    if [ "$BLUETOOTH" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            display_module btusb
+            display_module bluetooth
+            exit
+        fi
+        # TODO: propper else
+        if [ "$1" == "off" ]; then
+            unload_mod btusb
+            unload_mod bluetooth
+        else
+            load_mod btusb
+            load_mod bluetooth
+        fi
+    fi
+}
+
+# video
+video() {
+    if [ "$VIDEO" == "true" ]; then
+        if [ "$1" == "now" ]; then
+            if [ "$VIDEO_ati_open" == "true" ]; then
+                dump /sys/class/drm/card0/device/power_method
+                dump /sys/class/drm/card0/device/power_profil
+            fi
+            if [ "$VIDEO_intel" == "true" ]; then
+                dump /sys/module/i915/parameters/i915_enable_rc6
+            fi
+            exit
+        fi
+        # open source ATI
+        if [ "$VIDEO_ati_open" == "true" ]; then
+            opt /sys/class/drm/card0/device/power_method profile
+            if [ "$1" == "performance" ]; then
+                opt /sys/class/drm/card0/device/power_profile default
+            else
+                opt /sys/class/drm/card0/device/power_profile low
+            fi
+        fi
+        # i915
+        if [ "$VIDEO_intel" == "true" ]; then
+            if [ "$1" == "performance" ]; then
+                opt /sys/module/i915/parameters/i915_enable_rc6 0
+            else
+                opt /sys/module/i915/parameters/i915_enable_rc6 1
+            fi
+        fi
+    fi
+}
+
+euidz() {
+    if [[ $EUID != 0 ]]; then
+        if [ -z "$1" ]; then
+            echo "must be run as root"
+        else
+            echo $1
+        fi
+        exit 1
+    fi
+}
+
+source LIBPREFIX/fd-pm-functions
+source ETCPREFIX/ferrydust/pm.rc
+
+case "$1" in
+    ac|up|performance)
+        action="ac"
+        euidz
+        logger -t "fd-pm" "disabling power saving"
+        bbswitch "ON"
+        bus "on"
+        usb "600" "on"
+        nmi "1"
+        cpu "$CPU_powered_governor" "$CPU_powered_thermal"
+        aspm "default"
+        vm "0" "30" "10" "600" "600"
+        disk "medium_power" "relatime" "256" "254" "253"
+        sound "0" "N" "0"
+        net "off"
+        backlight "5"
+        webcam "on"
+        bluetooth "on"
+        video "performance"
+        ;;
+    bat|down|powersave)
+        action="bat"
+        euidz
+        logger -t "fd-pm" "enabling power saving"
+        bbswitch "OFF"
+        bus "auto"
+        usb "10" "auto"
+        nmi "0"
+        cpu "$CPU_governor"
+        aspm "powersave" "$CPU_thermal"
+        vm "$VM_laptop_mode" "$VM_dirty_ratio" "$VM_dirty_background_ratio" "$VM_dirty_expire_centisecs" "$VM_dirty_writeback_centisecs"
+        disk "min_power" "noatime" "4096" "1" "$DISK_spindown_to"
+        sound "1" "Y" "1"
+        net "on"
+        backlight "1"
+        webcam "off"
+        bluetooth "off"
+        video "powersave"
+        ;;
+    ""|now|status|info)
+        lock
+        display_power
+        euidz "You need to be root for further details"
+        echo
+        echo " :: Detail"
+        bbswitch "now"
+        bus "now"
+        usb "now"
+        nmi "now"
+        cpu "$CPU_powered_governor" "$CPU_powered_thermal" "now"
+        aspm "now"
+        vm "now"
+        disk "now"
+        sound "now"
+        net "now"
+        backlight "now"
+        webcam "now"
+        bluetooth "now"
+        video "now"
+        ;;
+    *)
+        echo "fd-pm [ac|bat|now]"
+        exit
+        ;;
+esac
+
+# other
+#for i in $(ls "/etc/ferrydust/pm.d/${action}-*"); do
+#    echo $i
+#    #run $i ac;
+#done
+
+exit 0

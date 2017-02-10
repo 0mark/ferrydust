@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-# powerdown-functions
+#!SHELL_FULL
 
 PATH="$PATH:/sbin:/usr/sbin:/usr/local/sbin"
 
@@ -127,7 +126,7 @@ resume_boot_option() {
 
 # lock the file until the script finishes
 lock() {
-    local LOCK=/tmp/powerdown.lock
+    local LOCK=/tmp/fd-pm.lock
     if [[ -f $LOCK ]]; then
         echo "Working... $LOCK"
         exit

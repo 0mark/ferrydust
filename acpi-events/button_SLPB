@@ -1,2 +1,2 @@
 event=button.*(SLPB|SBTN).*
-action=SBINPREFIX/ferryslumber mem
+action=SBINPREFIX/fd-suspend mem

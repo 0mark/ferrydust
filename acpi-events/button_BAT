@@ -1,2 +1,2 @@
 event=button.*(BAT).*
-action=SBINPREFIX/setbat
+action=SBINPREFIX/fd-smapi-bat

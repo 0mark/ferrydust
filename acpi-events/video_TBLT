@@ -1,2 +1,2 @@
 event=video.*TBLT(.*)
-action=SBINPREFIX/tabletmode %e
+action=SBINPREFIX/fd-tablet %e

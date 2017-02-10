@@ -1,0 +1,3 @@
+#!SHELL_FULL
+
+fd-getkey $1 > /dev/null

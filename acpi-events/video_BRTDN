@@ -1,2 +1,2 @@
 event=video.*BRTDN.*
-action=SBINPREFIX/setbright down
+action=SBINPREFIX/fd-bright-ctrl down

@@ -6,8 +6,8 @@ USB_powersave=true
 
 NMI=true
 
-#CPU=true
-#CPU_governor=ondemand
+CPU=true
+CPU_governor=ondemand
 #CPU_thermal=false
 
 #ASPM=true

@@ -1,0 +1,54 @@
+#!SHELL_FULL
+
+source ETCPREFIX/ferrydust/system.rc
+
+case "$1" in
+    mount)
+        c=0
+        for i in $(mount | cut -d " " -f 1); do
+            mounted[$c]="$i"
+            let c++
+        done
+        for i in ${MOUNT_DEVS[@]}; do
+            for ii in /dev/${i}*; do
+                if [ -b "$ii" ]; then
+                    blocked=0
+                    for iii in ${MOUNT_BLOCK[@]}; do
+                        if [ $(echo $ii | grep $iii | wc -l) -gt 0 ]; then blocked=1; fi
+                    done
+                    for iii in ${mounted[@]}; do
+                        if [ "$iii" == "$ii" ]; then blocked=1; fi
+                    done
+                    if [ $blocked -eq 0 ]; then
+                        devices="${devices}${ii}\n"
+                    fi
+                fi
+            done
+        done
+        device=$(echo -e "${devices}" | dmenu $DMENUSETTINGS)
+
+        if [ -n "$device" ]; then
+            pmount $device
+        fi
+        ;;
+    umount)
+        for i in $(mount | grep /media | cut -d " " -f 1); do
+            devices="${devices}${i}\n"
+        done
+
+        device=$(echo -e "${devices}" | dmenu $DMENUSETTINGS)
+
+        if [ -n "$device" ]; then
+            pumount $device
+        fi
+        ;;
+    *)
+        echo "fd-mm action"
+        echo "action: mount, umount"
+        ;;
+esac
+
+
+#if [ "$1" == "u" ]; then
+#else
+#fi

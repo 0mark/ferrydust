@@ -1,0 +1,17 @@
+#!SHELL_FULL
+
+key=$1
+[ -z "$key" ] && exit 1
+opt=$2
+
+if [ "$opt" != "sys" ]; then
+	value=$(grep -v -e '^#' ${XDG_CONFIG_HOME:-$HOME/.config}/ferrydust/rc | egrep "\s*$key\s*=" | sed "s/[^=]*= *//")
+fi
+if [ -z "$value" -a "$opt" != "usr" ]; then
+	value=$(grep -v -e '^#' ETCPREFIX/ferrydust/system.rc | grep $key | sed "s/[^=]*= *//")
+fi
+if [ -z "$value" ]; then
+	exit 1;
+fi
+
+echo $value

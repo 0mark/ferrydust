@@ -1,0 +1,44 @@
+#!SHELL_FULL
+
+NOTIFYSEND=$(which notify-send 2>/dev/null)
+if [ -z "$NOTIFYSEND" ]; then
+	exit 1;
+fi
+if [ ! -x "$NOTIFYSEND" ]; then
+	exit 1;
+fi
+
+source LIBPREFIX/fd-functions
+
+un="$(prime_user)"
+
+if [ -z $un ]; then
+	#echo "No primary user found"
+	#exit 1
+	un=root
+fi
+
+export DISPLAY="$(display_by_username $un)"
+
+PARENT_CMD="$(ps -o comm= $PPID)"
+
+if [[ $EUID != 0 ]]; then
+	pmid=$(grep "^${un}:" /etc/passwd | cut -d ":" -f 3)
+	if [ "$pmid" -ne "$EUID" ]; then
+		echo "Not root"
+		exit 1
+	fi
+	notify-send -a "$PARENT_CMD" "$@"
+else
+	OPT=""
+	for i in "$@"; do
+		if [ "${i:0:1}" == '-' ]; then
+			OPT="$OPT $i"
+		else
+			OPT="$OPT \"$i\""
+		fi
+	done
+	su $un -c "notify-send -a \"$PARENT_CMD\" $OPT"
+fi
+
+

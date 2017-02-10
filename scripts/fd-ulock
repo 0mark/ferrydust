@@ -1,0 +1,21 @@
+#!SHELL_FULL
+
+source LIBPREFIX/fd-functions
+
+un="$(prime_user)"
+
+if [ -z $un ]; then
+	echo "No primary user found"
+	exit 1
+fi
+
+if [[ $EUID != 0 ]]; then
+	pmid=$(grep "^${un}:" /etc/passwd | cut -d ":" -f 3)
+	if [ "$pmid" -ne "$EUID" ]; then
+		echo "Not root"
+		exit 1
+	fi
+	fd-app lock
+else
+	$(su $un -c 'DISPLAY=:0 fd-app lock')
+fi

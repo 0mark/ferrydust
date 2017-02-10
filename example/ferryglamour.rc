@@ -1,0 +1,74 @@
+# position on which new outputs should be added added
+# (left-of, right-of, above, below)
+#POSITION="left-of"
+
+# maximum number of outputs your viceo card can handle
+MAX_ENABLED_OUTPUTS=3
+
+# list of all available outputs
+#OUTPUTS=$(xrandr | awk '$2 ~ /connected/ {print $1}')
+
+DEFAULT_OUTPUT_NAME="eDP1"
+
+# default device (usually LVDS or something)
+#DEFAULT_OUTPUT=$(sed -ne 's/.*\($DEFAULT_OUTPUT_NAME[^ ]*\).*/\1/p' <<<$OUTPUTS)
+
+# if this value is not zero and synergys is running, it will be
+# restartet after the screens are set using its value as config file
+#SYNERGYS_RESTART=$(fd-getkey synergyscfg)
+
+
+# the output thats wired to the second card
+#VIRTUAL_OUTPUT='HDMI-0'
+# the display the second X is running on
+#VIRTUAL_OUTPUT_DISPLAY=8
+# the actually used virtual output
+#VIRTUAL_OUTPUT_DISABLE_EXCEPT='VIRTUAL2'
+
+custom_randr() {
+    wppath=$(fd-getkey wallpaperPath)
+    lid=
+
+    # With --verbose, xrandr will output the edid of your outputs it should
+    # be rather unique, so i use it to detect specific setups.
+    # My main Monitor has EDID "00ffffffffffff001ab35405a3d60100" and sits
+    # right of my laptop's dock.
+    if [ $(xrandr -q --verbose | egrep '(00ffffffffffff001ab35405a3d60100)' | wc -l) -eq 1 ]; then
+        POSITION="right-of"
+
+        if [ "$(ps -A | grep talasta | wc -l)" == 0 ]; then
+            sudo talasta &> /dev/null &
+        fi
+
+        if [ $(netcfg current | grep eth | wc -l) == 0 ]; then
+            sudo netcfg eth &
+        fi
+    else
+        if [ "$(ps -A | grep talasta | wc -l)" -gt 0 ]; then
+            sudo talasta-kill &> /dev/nul
+        fi
+
+        if [ $(netcfg current | grep eth | wc -l) -gt 0 ]; then
+            netcfg -d eth
+        fi
+    fi
+
+    # if the lid is closed, disable internal display.
+    # TODO: check for presence of other displays!
+    if [ "$(cat /proc/acpi/button/lid/LID0/state | sed 's/.*:\s*//g')" == "closed" ]; then
+        UNCONNECTED="LVDS1"
+        CONNECTED=$(xrandr | awk '$2 == "connected" {print $1}' | tr "\n" " " | sed 's/\( \+$\)\|\(^ \+\)//g')
+        DEFAULT_OUTPUT=$(echo ${CONNECTED/LVDS1} | sed 's/\( \+$\)\|\(^ \+\)//g')
+        OUTPUTS="$OUTPUTS LVDS1"
+        OUTPUTS=$(echo ${OUTPUTS/$DEFAULT_OUTPUT/} | sed 's/\( \+$\)\|\(^ \+\)\|\(  \+\)//g')
+    fi
+
+    default_randr
+
+    if [ "$initialize" -ne 1 ]; then
+      fd-app wall $wppath &> /dev/null &
+    fi
+
+    killall xcmenu
+    xcmenu --daemon
+}

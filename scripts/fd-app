@@ -1,11 +1,10 @@
-#!/bin/sh
+#!SHELL_FULL
 
 app=$1
-
+[ -z "$app" ] && exit 1
 shift 1
 
 command=$(fd-getkey $app"App")
-
 [ -z "$command" ] && exit 1
 
 exec $command "$@"

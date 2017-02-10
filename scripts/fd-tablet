@@ -1,0 +1,22 @@
+#!SHELL_FULL
+
+source ETCPREFIX/ferrydust/system.rc
+source LIBPREFIX/fd-functions
+
+un="$(prime_user)"
+
+case $4 in
+    00000001)
+        su $un -c 'DISPLAY=:0 fd-app vkbd &'
+        su $un -c 'DISPLAY=:0 xrandr --output ${TABLET_RANDR_STRING} --rotate ${TABLET_RANDR_ROTATE[0]}'
+        su $un -c 'DISPLAY=:0 xsetwacom set "${TABLET_STRING}" rotate ${TABLET_ROTATE[0]}'
+        ;;
+    00000000)
+        su $un -c 'DISPLAY=:0 xrandr --output ${TABLET_RANDR_STRING} --rotate ${TABLET_RANDR_ROTATE[1]}'
+        su $un -c 'DISPLAY=:0 xsetwacom set "${TABLET_STRING}" rotate ${TABLET_ROTATE[1]}'
+        su $un -c 'killall $(basename $(fd-getkey vkbdApp))'
+        ;;
+    *)
+        logger "tabletmode -- $4"
+        ;;
+esac

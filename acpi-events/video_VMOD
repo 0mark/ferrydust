@@ -1,2 +1,2 @@
 event=video.*VMOD.*
-action=SBINPREFIX/vmod
+action=BINPREFIX/fd-urandr

@@ -1,2 +1,2 @@
 event=video.*BRTUP.*
-action=SBINPREFIX/setbright up
+action=SBINPREFIX/fd-bright-ctrl up

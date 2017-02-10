@@ -1,14 +1,15 @@
-#!/bin/bash
+#!SHELL_FULL
 
-# TODO: fail on error!
+# exit on error
+#set -e
 
-source ETCPREFIX/acpithings.rc
+source ETCPREFIX/ferrydust/system.rc
 
 function susprep {
     logger -t suspend "sleeping down"
     for A in $(ls /media/); do pumount $A; done;
     $NET_DOWN
-    /usr/local/bin/uslock &
+    BINPREFIX/fd-ulock &
     sleep 0.2
     sync
     logger -t suspend "sleeping now"
@@ -18,11 +19,9 @@ function suspres {
     logger -t suspend "waking up"
     $NET_UP
     if [ "$(</sys/class/power_supply/AC/online)" -ne 1 ]; then
-        #logger -t suspend "****trying powerdown"
-        $(sleep 5; /usr/local/sbin/powerdown) &
+        $(sleep 5; BINPREFIX/fd-pm down) &
     else
-        #logger -t suspend "****trying powerup"
-        $(sleep 5; /usr/local/sbin/powerup) &
+        $(sleep 5; BINPREFIX/fd-pm up) &
     fi
     logger -t suspend "woken up"
 }
@@ -44,16 +43,18 @@ fi
 
 susprep
 if [ "$to" == "disk" ]; then
-    echo -n disk >/sys/power/state
-elif [ "$to" == "hybrid" ]; then
-    now="$(date -u +%s)"
-    rtcwake -u -m mem -s "$HYBRID_SUSPEND_TIMEOUT"
-    dif="$(($(date -u +%s) - $now))"
-    if (( $dif >= "$HYBRID_SUSPEND_TIMEOUT" )); then
-        sleep 5
+    if [ "$SUSPEND_HYBRID" == "true" ]; then
+        now="$(date -u +%s)"
+        rtcwake -u -m mem -s "$HYBRID_SUSPEND_TIMEOUT"
+        dif="$(($(date -u +%s) - $now))"
+        if (( $dif >= "$HYBRID_SUSPEND_TIMEOUT" )); then
+            sleep 5
+            echo -n disk >/sys/power/state
+            # TODO: s2r on fail
+            # TODO: kill lock else
+        fi
+    else
         echo -n disk >/sys/power/state
-        # TODO: s2r on fail
-        # TODO: kill lock else
     fi
 else
     echo -n mem >/sys/power/state

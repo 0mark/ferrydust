@@ -1,0 +1,3 @@
+#!SHELL_FULL
+
+test "$(fd-getkey $1)" = "true" && { exit 0; } || { exit 1; }
