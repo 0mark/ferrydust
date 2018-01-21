@@ -1,4 +1,4 @@
-#!SHELL_FULL
+#!/bin/sh
 
 PATH="$PATH:/sbin:/usr/sbin:/usr/local/sbin"
 
@@ -7,9 +7,24 @@ me="$(basename $0)"
 shopt -s nullglob extglob
 
 # turn on kernel options
+#opt() {
+#    [[ -f "$1" ]] || return
+#    tee "$1" <<<"$2" &>/dev/null || echo "[$me] cannot write $2 to $1"
+#}
+
 opt() {
-    [[ -f "$1" ]] || return
-    tee "$1" <<<"$2" &>/dev/null || echo "[$me] cannot write $2 to $1"
+    if [ ! -f "$1" ]; then
+        echo -e -n "${COL_YEL}.${COL_DEF}"
+        return 2
+    fi
+
+    if tee "$1" <<< "$2" &> /dev/null; then
+        echo -e -n "${COL_GRN}.${COL_DEF}"
+        return 0
+    else
+        echo -e -n "${COL_RED}.${COL_DEF}"
+        return 1
+    fi
 }
 
 # unload kernel module
@@ -40,13 +55,30 @@ mod_loaded() {
 # $1 = max file
 # $2 = value
 num_scale() {
-    local scale="$(bc <<< "$(< "$1") / 5")"
-    echo "$(( $scale * $2 ))"
+    #local scale="$(bc <<< "($(< "$1") * 10) / 5")"
+    local scale="$(bc <<< "("$1" * 10) / 5")"
+    echo "$(( ( $scale * $2 ) / 10 ))"
+}
+# max / 5 * val
+# 5 / max * val
+
+elacs_mun() {
+    #local scale="$(bc <<< "($(< "$1") * 10) / 5")"
+    if [ $1 -eq 0 ]; then
+        echo $2
+        exit
+    fi
+    local scale="$(bc <<< "(5 * 1000 + 500) / "$1"")"
+    echo "$(( ( $scale * $2 ) / 1000 ))"
 }
 
 # command
 run() {
-    "$@" &> /dev/null || echo "[$me] cannot run $@"
+    if "$@" &> /dev/null; then
+        echo -e -n "${COL_GRN}.${COL_DEF}"
+    else
+        echo -e -n "${COL_RED}.${COL_DEF}"
+    fi
 }
 
 has_bat() {
@@ -84,6 +116,65 @@ display_readahead() {
 dump () {
     [[ -w "$1" && -r "$1" ]] || return
     echo " -> $1: $(< "$1")"
+}
+
+acdc () {
+    [[ -w "$1" && -r "$1" ]] || return
+    val=$(< "$1")
+
+    if [ "$cur_state" == "1" -a "$val" == "$2" ]; then
+        col=$COL_GRN
+    elif [ "$cur_state" == "0" -a "$val" == "$3" ]; then
+        col=$COL_GRN
+    else
+        col=$COL_RED
+    fi
+    if [ "$val" == "$2" ]; then
+        echo -e -n "${col}^${COL_DEF}"
+    elif [ "$val" == "$3" ]; then
+        echo -e -n "${col}v${COL_DEF}"
+    else
+        echo -e -n "${COL_YEL}?${COL_DEF}"
+    fi
+}
+
+acdc_run () {
+    local ac=$1
+    shift
+    local bat=$1
+    shift
+    val=$($@)
+    if [ "$cur_state" == "1" -a "$val" == "$ac" ]; then
+        col=$COL_GRN
+    elif [ "$cur_state" == "0" -a "$val" == "$bat" ]; then
+        col=$COL_GRN
+    else
+        col=$COL_RED
+    fi
+    if [ "$val" == "$ac" ]; then
+        echo -e -n "${col}^${COL_DEF}"
+    elif [ "$val" == "$bat" ]; then
+        echo -e -n "${col}v${COL_DEF}"
+    else
+        echo -e -n "${COL_YEL}?${COL_DEF}"
+    fi
+}
+
+acdc_test () {
+    if [ "$cur_state" == "1" -a "$1" == "$2" ]; then
+        col=$COL_GRN
+    elif [ "$cur_state" == "0" -a "$1" == "$3" ]; then
+        col=$COL_GRN
+    else
+        col=$COL_RED
+    fi
+    if [ "$1" == "$2" ]; then
+        echo -e -n "${col}^${COL_DEF}"
+    elif [ "$1" == "$3" ]; then
+        echo -e -n "${col}v${COL_DEF}"
+    else
+        echo -e -n "${COL_YEL}?${COL_DEF}"
+    fi
 }
 
 display_module() {
@@ -138,10 +229,15 @@ lock() {
 # $1 = device path
 is_usb_hid() {
     local subdev
+    if [ "${1/\/sys\/bus\/usb\/*/}" != "" ]; then
+        return 1
+    fi
+
     for subdev in $1/*:*; do
         # USB_DEVICE_CLASS 3 = HID
         [[ "$(< "$subdev/bInterfaceClass")" == 03 ]] && return 0
     done
+
     return 1
 }
 

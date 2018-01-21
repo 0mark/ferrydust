@@ -9,6 +9,28 @@ if [ -z $un ]; then
 	exit 1
 fi
 
+uid=$(id -u $un)
+if [ -z $uid ]; then
+	echo "User id found"
+	exit 1
+fi
+
+if [ "$1" == '-t' ]; then
+	if [ -f /run/user/$uid/fd-ulock.pid ]; then
+		pid="$(< /run/user/$uid/fd-ulock.pid)"
+		kill -0 $pid
+		if [ $? -eq 0 ]; then
+			name=$(ps -p $pid -o comm=)
+			if [ ! -z "$name" -a "$name" == "$(basename $0)" ]; then
+				exit 0
+			fi
+		fi
+	fi
+	exit 1
+fi
+
+echo $$ > /run/user/$uid/fd-ulock.pid
+
 if [[ $EUID != 0 ]]; then
 	pmid=$(grep "^${un}:" /etc/passwd | cut -d ":" -f 3)
 	if [ "$pmid" -ne "$EUID" ]; then
@@ -17,5 +39,15 @@ if [[ $EUID != 0 ]]; then
 	fi
 	fd-app lock
 else
-	$(su $un -c 'DISPLAY=:0 fd-app lock')
+	for i in $(ls -v /tmp/.X11-unix/); do
+		disp=${i#X}
+		DISPLAY=:$disp prop -notype -root CUT_BUFFER0 &> /dev/null
+		if [ $? -eq 0 ]; then
+			disp=:$disp
+			break
+		fi
+	done
+	$(su $un -c "DISPLAY=:$disp fd-app lock")
 fi
+
+rm /run/user/$uid/fd-ulock.pid

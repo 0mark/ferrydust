@@ -1,7 +1,11 @@
 #!SHELL_FULL
 
 export XDG_DATA_DIRS="$XDG_DATA_DIRS:/usr/share"
-export QT_STYLE_OVERRIDE=gtk
+#export QT_STYLE_OVERRIDE=gtk
+export QT_QPA_PLATFORMTHEME="qt5ct"
+export QT_AUTO_SCREEN_SCALE_FACTOR=0 ./Fritzing
+
+
 
 startdwm() {
 	if fd-iftrue wmRestart; then
@@ -68,8 +72,6 @@ if fd-iftrue startDbus; then
 	eval $(dbus-launch --auto-syntax --exit-with-session)
 fi
 
-startdwm &
-
 # ** start keychain
 if fd-iftrue startKeychain; then
 	[ -z "$HOSTNAME" ] && HOSTNAME=`uname -n`
@@ -101,7 +103,16 @@ if fd-iftrue startGnomeKeyring; then
 	export GPG_AGENT_INFO
 	export GNOME_KEYRING_CONTROL
 	export GNOME_KEYRING_PID
+#	eval $(/usr/bin/gnome-keyring-daemon --start --components=secrets)
+#	export GNOME_KEYRING_CONTROL
+#	export SSH_AUTH_SOCK
+#	eval $(/usr/bin/gnome-keyring-daemon --start --components=ssh)
+#	export GNOME_KEYRING_CONTROL
+#	export SSH_AUTH_SOCK
 fi
+
+#startdwm &
+fd-app wm &
 
 # ** connection manager
 if fd-haskey startConMan; then

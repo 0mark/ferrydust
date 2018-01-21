@@ -1,0 +1,194 @@
+#!SHELL_FULL
+
+source /etc/ferrydust/system.rc
+
+if [ "$BRIGHT_FADE_STEPS" == "" ]; then
+	if [ "$BRIGHT_STEPS" != "" ]; then
+		BRIGHT_FADE_STEPS=$BRIGHT_STEPS
+	else
+		BRIGHT_FADE_STEPS=10
+	fi
+fi
+
+DARKEN_TIMEOUT=${DARKEN_TIMEOUT:-30}
+DARKEN_AC_TIMEOUT=${DARKEN_AC_TIMEOUT:-$((DARKEN_TIMEOUT*2))}
+LOCK_TIMEOUT=${LOCK_TIMEOUT:-300}
+LOCK_AC_TIMEOUT=${LOCK_AC_TIMEOUT:-$LOCK_TIMEOUT}
+LOCK_SAVE_TIMEOUT=${LOCK_SAVE_TIMEOUT:-0}
+SAVE_NETWORKS=${SAVE_NETWORKS:-}
+FADE_STEP_DUR=${FADE_STEP_DUR:-0.1}
+DARK_BRIGHTNESS=${DARK_BRIGHTNESS:-1}
+BRIGHT_FADE_STEPS=${BRIGHT_FADE_STEPS:-20}
+FADE_DUR=$(bc <<< "$BRIGHT_FADE_STEPS / (1 / $FADE_STEP_DUR) + 1")
+
+bright_state="bright"
+wait_mode="unknown"
+fd-ulock -t
+if [ $? -eq 0 ]; then
+	locked=true
+else
+	locked=false
+fi
+idles=$(sinac -p 2>/dev/null || echo 0)
+cur_step_bright_value="$(fd-bright-ctrl cur)"
+last_step_bright_value=$cur_step_bright_value
+long_time_no_see=0
+on_ac=0
+debug=false
+
+[ $debug == true ] && echo "Locked: $locked, idle for: $idles, state: $bright_state, wait mode: $wait_mode"
+
+
+while true; do
+	# TODO: test for other instance -> exit if found
+	# TODO: longer lock timeout at home
+
+	xhost &> /dev/null
+	if [ $? -ne 0 ]; then
+		if [ $long_time_no_see -lt 12 ]; then
+			let long_time_no_see++
+		fi
+		echo "No X, i wait a bit..."
+		sleep "$(($long_time_no_see * 5))"
+		continue
+	fi
+	long_time_no_see=0
+
+	acpi -V | grep "on-line" &> /dev/null
+	if [ $? -eq 0 ]; then
+		DARKEN_TIMEOUT_VAL=$DARKEN_AC_TIMEOUT
+		LOCK_TIMEOUT_VAL=$LOCK_AC_TIMEOUT
+		[ $debug == true ] && echo "on AC, darken timeout is now $DARKEN_TIMEOUT_VAL, lock timeout is now $LOCK_TIMEOUT_VAL"
+	else
+		DARKEN_TIMEOUT_VAL=$DARKEN_TIMEOUT
+		LOCK_TIMEOUT_VAL=$LOCK_TIMEOUT
+		[ $debug == true ] && echo "on battery, darken timeout is now $DARKEN_TIMEOUT_VAL, lock timeout is now $LOCK_TIMEOUT_VAL"
+	fi
+
+	if [ "$SAVE_NETWORKS" != "" ]; then
+		c=$(nmcli c s --active | egrep "$SAVE_NETWORKS" | wc -l)
+		if [ $c -gt 0 ]; then
+			LOCK_TIMEOUT_VAL=$LOCK_SAVE_TIMEOUT
+			[ $debug == true ] && echo "save network, lock timeout is now $LOCK_TIMEOUT_VAL"
+		fi
+	fi
+
+	case $wait_mode in
+		'inac')
+			[ $debug == true ] && echo "wait inac timeout: $next_timeout [$(($next_timeout - $idles))]"
+			sinac -w $next_timeout
+			idles=$next_timeout
+			;;
+		'ac_or_timeout')
+			[ $debug == true ] && echo "wait ac or timeout: $next_timeout [$(($next_timeout - $idles))]"
+			idles=$(sinac -p)
+			sinac -W $next_timeout
+			if [ $? -eq 0 ]; then
+				idles=$next_timeout
+			else
+				idles=0
+			fi
+			;;
+		'ac')
+			[ $debug == true ] && echo "wait ac"
+			sinac -W
+			idles=0
+			;;
+		'transition')
+			[ $debug == true ] && echo "wait transition ${FADE_STEP_DUR}s"
+			sleep $FADE_STEP_DUR
+			idles=$(sinac -p)
+			;;
+		*)
+			[ $debug == true ] && echo "wait 1s ($wait_mode)"
+			sleep 1
+			idles=$(sinac -p)
+			;;
+	esac
+
+
+	if [ $locked != false ]; then
+		kill -0 $locked &> /dev/null
+		if [ $? -ne 0 ]; then
+			locked=false
+		fi
+	fi
+	if [ $idles -ge $LOCK_TIMEOUT_VAL -a $LOCK_TIMEOUT_VAL -ne 0 -a $locked == false ]; then
+		fd-ulock &
+		locked=$!
+		if [ $? -eq 0 -a "$!" != "" ]; then
+			echo "locked"
+		else
+			echo "cant lock"
+			locked=false
+			# TODO: do stuff!
+		fi
+	fi
+
+
+	case $bright_state in
+		bright)
+			if [ $idles -ge $DARKEN_TIMEOUT_VAL -a $DARKEN_TIMEOUT_VAL -ne 0 ]; then
+				bright_value="$(fd-bright-ctrl cur)"
+				bright_state='fade_down'
+			fi
+			;;
+		dark)
+			if [ $idles -eq 0 ]; then
+				bright_state='fade_up'
+			fi
+			;;
+	esac
+
+	if [ "$wait_mode" == "transition" ]; then
+		cur_step_bright_value="$(fd-bright-ctrl cur)"
+	
+		if [ $cur_step_bright_value -ne $last_step_bright_value ]; then
+			bright_state="bright"
+			wait_mode="inac"
+		else
+			case $bright_state in
+				fade_up)
+					fd-bright-ctrl fade_up $bright_value
+					if [ $? -eq 255 ]; then
+						bright_state="bright"
+					fi
+					;;
+				fade_down)
+					fd-bright-ctrl fade_down $DARK_BRIGHTNESS
+					if [ $? -eq 255 ]; then
+						bright_state="dark"
+					fi
+					;;
+			esac
+		fi
+		last_step_bright_value=$cur_step_bright_value
+	fi
+
+	[ $debug == true ] && echo "wait: $wait_mode, bright: $bright_state, locked: $locked, idle: $idles"
+	if [ "${bright_state%_*}" == "fade" ]; then
+		wait_mode='transition'
+		if [ "$bright_state" == "fade_down" -a $idles -lt $FADE_DUR ]; then
+			bright_state="fade_up"
+		fi
+		last_step_bright_value="$(fd-bright-ctrl cur)"
+	else
+		if [ $idles -lt $DARKEN_TIMEOUT_VAL -o $idles -lt $LOCK_TIMEOUT_VAL ]; then
+			if [ $idles -eq 0 ]; then
+				wait_mode="inac"
+			else
+				wait_mode="ac_or_timeout"
+			fi
+
+			if [ $DARKEN_TIMEOUT_VAL -lt $LOCK_TIMEOUT_VAL -a $idles -lt $DARKEN_TIMEOUT_VAL ] || [ $LOCK_TIMEOUT_VAL -lt 1 ]; then
+				next_timeout=$DARKEN_TIMEOUT_VAL
+			else
+				next_timeout=$LOCK_TIMEOUT_VAL
+			fi
+		else
+			unset next_timeout
+			wait_mode="ac"
+		fi
+	fi
+	[ $debug == true ] && echo "wait: $wait_mode, bright: $bright_state, locked: $locked, idle: $idles"
+done

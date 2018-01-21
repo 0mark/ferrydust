@@ -1,5 +1,12 @@
 BRIGHT_PATH="/sys/class/backlight/intel_backlight"
-BRIGHT_STEPS=8
+BRIGHT_STEPS=6
+BRIGHT_FADE_STEPS=20
+
+DARKEN_TIMEOUT=60
+LOCK_TIMEOUT=500
+DARK_BRIGHTNESS=180
+
+SAVE_NETWORKS=haywire
 
 CHARGE_START_HIGH=81
 CHARGE_END_HIGH=95
@@ -11,6 +18,7 @@ NET_UP=""
 
 MOUNT_DEVS=( "sd" "mmcblk" )
 MOUNT_BLOCK=( "sda" )
+UMOUNT_AUTO_SKIP=( "mmcblk0" )
 
 BACKUP_SRC=( "/home/mark" "/etc" )
 BACKUP_SUBDIR="backup"
@@ -21,3 +29,5 @@ TABLET_RANDR_STRING="lvds1"
 TABLET_RANDR_ROTATE=(normale inverted)
 
 SUSPEND_HYBRID=false
+
+MOUNT_THING="udiskie"

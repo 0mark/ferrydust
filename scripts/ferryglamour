@@ -17,7 +17,7 @@ if [ -f "$CPATH/ferryglamour.rc" ]; then
 fi
 
 # ** fix options missing in config
-# 
+#
 [ -z $POSITION ] && POSITION="left-of"
 # maximum number of outputs the viceo card can handle
 [ -z $MAX_ENABLED_OUTPUTS ] && MAX_ENABLED_OUTPUTS=2
@@ -30,7 +30,7 @@ fi
 # restart synergy?
 [ -z $SYNERGYS_RESTART ] && SYNERGYS_RESTART=$(fd-getkey synergyscfg)
 # remove default from list
-OUTPUTS=${OUTPUTS/$DEFAULT_OUTPUT/}
+OUTPUTS=$(sed 's/\(^\| \)'$DEFAULT_OUTPUT'\($\| \)/ /' <<< $OUTPUTS)
 
 # ignore VIRTUAL* outputs from intel when either
 #  - its not actually used but marked as connected (on my setup, VIRTUAL1 is not used but connected,
@@ -59,8 +59,12 @@ default_randr() {
     xrandr --output $DEFAULT_OUTPUT --off
   else
     if [[ $XRANDR == *$DEFAULT_OUTPUT\ connected\ * ]]; then
-      echo "Setting $DEFAULT_OUTPUT to auto"
-      xrandr --output $DEFAULT_OUTPUT --auto
+      XTRA=""
+      if [ "$PRIMARY_OUTPUT" == $DEFAULT_OUTPUT ]; then
+        XTRA=" --primary"
+      fi
+      echo "Setting $DEFAULT_OUTPUT to auto [$XTRA]"
+      xrandr --output $DEFAULT_OUTPUT --auto $XTRA
     fi
     LAST=$DEFAULT_OUTPUT
   fi
@@ -71,12 +75,19 @@ default_randr() {
   for CURRENT in $OUTPUTS; do
     if [[ $XRANDR == *\ $CURRENT\ connected* && $UNCONNECTED != *$CURRENT* ]]; then
       if [ $i -lt $MAX_ENABLED_OUTPUTS ]; then
+        XTRA=""
+        if [ "$PRIMARY_OUTPUT" == $CURRENT ]; then
+          XTRA=" --primary"
+        fi
         if [ ! -z "$LAST" ]; then
-          echo "Setting $CURRENT to auto ($POSITION $LAST)"
-          xrandr --output $CURRENT --auto --$POSITION $LAST
+          PV="POSITION_${CURRENT/-/_}"
+          #echo "--- $PV"
+          [ "${!PV}" != "" ] && POS=${!PV} || POS="$POSITION $LAST"
+          echo "Setting $CURRENT to auto ($POS) [$XTRA]"
+          xrandr --output $CURRENT --auto --$POS $XTRA
         else
-          echo "Setting $CURRENT to auto"
-          xrandr --output $CURRENT --auto
+          echo "Setting $CURRENT to auto [$XTRA]"
+          xrandr --output $CURRENT --auto $XTRA
         fi
         LAST=$CURRENT
       fi

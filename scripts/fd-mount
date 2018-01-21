@@ -1,46 +1,76 @@
 #!SHELL_FULL
 
+source LIBPREFIX/fd-functions
 source ETCPREFIX/ferrydust/system.rc
+
+udiskie_umount_wrapper() {
+    local un="$(whoami)"
+    udiskie-umount "/run/media/$un/$1"
+
+}
+
+if [ "$MOUNT_THING" == "udiskie" ]; then
+    mount_cmd="udiskie-mount"
+    umount_cmd="udiskie_umount_wrapper"
+elif [ "$MOUNT_THING" == "pmount" ]; then
+    mount_cmd="pmount"
+    umount_cmd="pumount"
+else
+    echo "MOUNT_THING setting \"$MOUNT_THING\" invalid"
+    exit 1
+fi
 
 case "$1" in
     mount)
-        c=0
-        for i in $(mount | cut -d " " -f 1); do
-            mounted[$c]="$i"
-            let c++
-        done
-        for i in ${MOUNT_DEVS[@]}; do
-            for ii in /dev/${i}*; do
-                if [ -b "$ii" ]; then
-                    blocked=0
-                    for iii in ${MOUNT_BLOCK[@]}; do
-                        if [ $(echo $ii | grep $iii | wc -l) -gt 0 ]; then blocked=1; fi
-                    done
-                    for iii in ${mounted[@]}; do
-                        if [ "$iii" == "$ii" ]; then blocked=1; fi
-                    done
-                    if [ $blocked -eq 0 ]; then
-                        devices="${devices}${ii}\n"
-                    fi
-                fi
-            done
-        done
-        device=$(echo -e "${devices}" | dmenu $DMENUSETTINGS)
+        device=$(get_mountable_devs | dmenu $DMENUSETTINGS)
 
         if [ -n "$device" ]; then
-            pmount $device
+            $mount_cmd $device
         fi
         ;;
     umount)
-        for i in $(mount | grep /media | cut -d " " -f 1); do
-            devices="${devices}${i}\n"
-        done
-
-        device=$(echo -e "${devices}" | dmenu $DMENUSETTINGS)
+        device=$(get_unmountable_devs | dmenu $DMENUSETTINGS)
 
         if [ -n "$device" ]; then
-            pumount $device
+            $umount_cmd "$device"
         fi
+        ;;
+    umount_all)
+        failed=0
+
+        if [ "$MOUNT_THING" == "udiskie" ]; then
+            for i in $(udiskie-info -a -f is_mounted); do
+                if ! umount_dev_is_auto_blocked "$i"; then
+                    # NOTE: $umount_cmd is udiskie_umount_wrapper which
+                    #       expects stuf to be mounted in /run/media
+                    # TODO: extend udiskie_umount_wrapper to accept two
+                    #       parameters
+                    udiskie-umount "$i"
+                    [ $? -ne 0 ] && failed=1
+                fi
+            done
+        elif [ "$MOUNT_THING" == "pmount" ]; then
+            for i in $(get_unmountable_devs); do
+                if ! umount_dev_is_auto_blocked "$i"; then
+                    $umount_cmd "$i"
+                    [ $? -ne 0 ] && failed=1
+                fi
+            done
+        fi
+
+        SAVEIFS=$IFS
+        IFS=$(echo -en "\n\b")
+        for i in $(mount | grep '^\(^\([0-9]\{1,3\}\.\)\{3\}[0-9]\{1,3\}:\)\|\(/\)[^ ]* on /[^ ]\+'); do
+            dev=$(echo $i | sed 's#\(/.*\?\) on /\([^/]\+/\)*\(.*\?\) type .*#\1#g;')
+            mp=$(echo $i | sed 's#\(/.*\?\) on \(/\([^/]\+/\)*\(.*\?\)\) type .*#\2#g;')
+            if ! mount_dev_is_blocked "$dev" && ! umount_dev_is_auto_blocked "$dev"; then
+                umount "$mp"
+                [ $? -ne 0 ] && failed=1
+            fi
+        done
+        IFS=$SAVEIFS
+
+        exit $failed
         ;;
     *)
         echo "fd-mm action"

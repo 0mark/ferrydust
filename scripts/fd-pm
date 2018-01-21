@@ -1,246 +1,563 @@
-#!SHELL_FULL
+#!/bin/sh
+
+shopt -s nullglob extglob
+
+COLOR="ansi"
+
+if [ "$COLOR" == "ansi" ]; then
+    COL_BLK="\033[1;30m"
+    COL_RED="\033[1;31m"
+    COL_GRN="\033[1;32m"
+    COL_YEL="\033[1;33m"
+    COL_BLU="\033[1;34m"
+    COL_VIO="\033[1;35m"
+    COL_CYN="\033[1;36m"
+    COL_WHT="\033[1;37m"
+    COL_DEF="\033[00m"
+fi
+
+blk_start() {
+    echo -e -n "${COL_VIO}$1${COL_DEF}\n"
+}
+
+blk_part() {
+    if [ $action == "now" ]; then
+        echo -e -n "  $1 ${COL_BLK}($3)${COL_DEF}: "
+    else
+        echo -e -n "  $1 ${COL_BLK}($3)${COL_DEF} -> ${COL_CYN}$2${COL_DEF}: "
+    fi
+}
+
+blk_part_end() {
+#    if [ $action != "now" ]; then
+        echo -e -n "\n"
+ #   fi
+}
+
+single_start() {
+    if [ "$2" != "now" ]; then
+        echo -e -n "${COL_VIO}$1${COL_DEF} -> ${COL_CYN}$2${COL_DEF} ${COL_BLK}($3)${COL_DEF}: "
+    fi
+}
+
+single_end() {
+    if [ "$1" != "now" ]; then
+        echo -e -n "\n"
+    fi
+}
+
+
+
+setval() {
+    CPU=${CPU:-true}
+    if [ "$CPU_governor" == "" ]; then
+        CPU_governor=false
+        if [ -d "/sys/devices/system/cpu/cpu0/cpufreq" ]; then
+            if [ "$(< /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver)" != "intel_pstate" ]; then
+                CPU_governor=true
+            fi
+        fi
+    fi
+    CPU_governor_ac=${CPU_governor_ac:-ondemand}
+    CPU_governor_bat=${CPU_governor_bat:-ondemand}
+    CPU_cooling_state=${CPU_cooling_state:-false}
+    CPU_cooling_state_ac=${CPU_cooling_state_ac:-0}
+    CPU_cooling_state_bat=${CPU_cooling_state_bat:-5}
+    [ $CPU_governor == false -a $CPU_cooling_state == false ] && CPU=false
+
+    lspci | egrep "VGA compatible controller: A(MD)|(TI)" &> /dev/null && VIDEO_amd_guess=true || VIDEO_amd_guess=false
+    lspci | egrep "VGA compatible controller: Intel" &> /dev/null && VIDEO_intel_guess=true || VIDEO_intel_guess=false
+    [ $VIDEO_amd_guess == true -o $VIDEO_intel_guess == true ] && VIDEO=${VIDEO:-true} || VIDEO=${VIDEO:-false}
+    VIDEO_amd=${VIDEO_amd:-$VIDEO_amd_guess}
+    VIDEO_amd_ac=${VIDEO_amd_ac:-default}
+    VIDEO_amd_bat=${VIDEO_amd_ac:-low}
+    VIDEO_intel=${VIDEO_intel:-$VIDEO_intel_guess}
+    VIDEO_intel_ac=${VIDEO_intel_ac:-0}
+    VIDEO_intel_bat=${VIDEO_intel_bat:-1}
+    local VIDEO_backlight_guess
+    local max=0
+    for i in /sys/class/backlight/*; do
+        if [ $max -eq 0 -o "$(< $i/max_brightness)" -gt $max ]; then
+            VIDEO_backlight_guess=$i
+            max="$(< $i/max_brightness)"
+        fi
+    done
+    [ ! -z $VIDEO_backlight_guess ] && VIDEO_backlight=${VIDEO_backlight:-true} || VIDEO_backlight=${VIDEO_backlight:-true}
+    VIDEO_backlight_path=${VIDEO_backlight_path:-$VIDEO_backlight_guess}
+    VIDEO_backlight_ac=${VIDEO_backlight_ac:-5}
+    VIDEO_backlight_bat=${VIDEO_backlight_bat:-1}
+
+    USB=${USB:-true}
+    USB_autosuspend=${USB_autosuspend:-true}
+    USB_autosuspend_ac=${USB_autosuspend_ac:-600}
+    USB_autosuspend_bat=${USB_autosuspend_bat:-10}
+    USB_powersave=${USB_powersave:-true}
+    USB_powersave_ac=${USB_powersave_ac:-on}
+    USB_powersave_bat=${USB_powersave_bat:-auto}
+
+    NET=${NET:-true}
+    NET_wifi_pm=${NET_wifi_pm:-true}
+    NET_wifi_pm_ac=${NET_wifi_pm_ac:-off}
+    NET_wifi_pm_bat=${NET_wifi_pm_bat:-on}
+    NET_wol=${NET_wol:-false}
+    NET_wol_ac=${NET_wol_ac:-pumbg}
+    NET_wol_bat=${NET_wol_bat:-d}
+
+    DISK=${DISK:-true}
+    DISK_alpm=${DISK_alpm:-true}
+    DISK_alpm_ac=${DISK_alpm_ac:-medium_power}
+    DISK_alpm_bat=${DISK_alpm_bat:-min_power}
+    DISK_remount=${DISK_remount:-false}
+    DISK_remount_options_ac=${DISK_remount_options_ac:-atime}
+    DISK_remount_options_bat=${DISK_remount_options_bat:-relatime}
+    DISK_readahead=${DISK_readahead:-false}
+    DISK_readahead_ac=${DISK_readahead_ac:-256}
+    DISK_readahead_bat=${DISK_readahead_bat:-4096}
+    DISK_hdparm_devices=${DISK_hdparm_devices:-none}
+    DISK_apm=${DISK_apm:-true}
+    DISK_apm_ac=${DISK_spindown_ac:-255}
+    DISK_apm_bat=${DISK_spindown_bat:-1}
+    DISK_spindown=${DISK_spindown:-true}
+    DISK_spindown_ac=${DISK_spindown_ac:-0}
+    DISK_spindown_bat=${DISK_spindown_bat:-120}
+
+    OTHER_nmi_watchdog=${OTHER_nmi_watchdog:-true}
+    OTHER_nmi_watchdog_ac=${OTHER_nmi_watchdog_ac:-1}
+    OTHER_nmi_watchdog_bat=${OTHER_nmi_watchdog_bat:-0}
+    OTHER_aspm=${OTHER_aspm:-false}
+    OTHER_aspm_ac=${OTHER_aspm_ac:-default}
+    OTHER_aspm_bat=${OTHER_aspm_bat:-powersave}
+    OTHER_alsa=${OTHER_alsa:-true}
+    OTHER_alsa_powersave=${OTHER_alsa_powersave:-true}
+    OTHER_alsa_powersave_ac=${OTHER_alsa_powersave_ac:-0}
+    OTHER_alsa_powersave_controller_ac=${OTHER_alsa_powersave_controller_ac:-N}
+    OTHER_alsa_powersave_bat=${OTHER_alsa_powersave_bat:-1}
+    OTHER_alsa_powersave_controller_bat=${OTHER_alsa_powersave_controller_bat:-Y}
+    OTHER_sysctl=${OTHER_sysctl:-true}
+    OTHER_sysctl_ac=${OTHER_sysctl_ac:-vm.laptop_mode=0 vm.dirty_ratio=30 vm.dirty_background_ratio=10 vm.dirty_expire_centisecs=600 vm.dirty_writeback_centisecs=600}
+    OTHER_sysctl_bat=${OTHER_sysctl_bat:-vm.laptop_mode=5 vm.dirty_ratio=90 vm.dirty_background_ratio=1 vm.dirty_expire_centisecs=6000 vm.dirty_writeback_centisecs=6000}
+
+    BUS=${BUS:-false}
+    BUS_powersave=${BUS_powersave:-false}
+    BUS_powersave_ac=on
+    BUS_powersave_bat=auto
+
+    case "$action" in
+        ac)
+            USB_autosuspend_val=$USB_autosuspend_ac
+            USB_powersave_val=$USB_powersave_ac
+            DISK_alpm_val=$DISK_alpm_ac
+            DISK_remount_val=$DISK_remount_ac
+            DISK_readahead_val=$DISK_readahead_ac
+            DISK_apm_val=$DISK_apm_ac
+            DISK_spindown_val=$DISK_spindown_ac
+            CPU_governor_val=$CPU_governor_ac
+            CPU_cooling_state_val=$CPU_cooling_state_ac
+            NET_wifi_pm_val=$NET_wifi_pm_ac
+            NET_wol_val=$NET_wol_ac
+            VIDEO_amd_val=$VIDEO_amd_ac
+            VIDEO_intel_val=$VIDEO_intel_ac
+            VIDEO_backlight_val=$VIDEO_backlight_ac
+            OTHER_nmi_watchdog_val=$OTHER_nmi_watchdog_ac
+            OTHER_aspm_val=$OTHER_aspm_ac
+            OTHER_alsa_powersave_val=$OTHER_alsa_powersave_ac
+            OTHER_alsa_powersave_controller_val=$OTHER_alsa_powersave_controller_ac
+            OTHER_sysctl_val=$OTHER_sysctl_ac
+            BUS_powersave_val=$BUS_powersave_ac
+            ;;
+        bat)
+            USB_autosuspend_val=$USB_autosuspend_bat
+            USB_powersave_val=$USB_powersave_bat
+            DISK_alpm_val=$DISK_alpm_bat
+            DISK_remount_val=$DISK_remount_bat
+            DISK_readahead_val=$DISK_readahead_bat
+            DISK_apm_val=$DISK_apm_bat
+            DISK_spindown_val=$DISK_spindown_bat
+            CPU_governor_val=$CPU_governor_bat
+            CPU_cooling_state_val=$CPU_cooling_state_bat
+            NET_wifi_pm_val=$NET_wifi_pm_bat
+            NET_wol_val=$NET_wol_bat
+            VIDEO_amd_val=$VIDEO_amd_bat
+            VIDEO_intel_val=$VIDEO_intel_bat
+            VIDEO_backlight_val=$VIDEO_backlight_bat
+            OTHER_nmi_watchdog_val=$OTHER_nmi_watchdog_bat
+            OTHER_aspm_val=${OTHER_aspm_bat}
+            OTHER_alsa_powersave_val=$OTHER_alsa_powersave_bat
+            OTHER_alsa_powersave_controller_val=$OTHER_alsa_powersave_controller_bat
+            OTHER_sysctl_val=$OTHER_sysctl_bat
+            BUS_powersave_val=$BUS_powersave_bat
+            ;;
+    esac
+}
+
+
+cpu() {
+    if [ $CPU == true ]; then
+        local i
+        blk_start "CPU"
+
+        if [ $CPU_governor == true ]; then
+            blk_part "cpu scaling governor" "$CPU_governor_val" "/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+            for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+                if [ $action == now ]; then
+                    acdc $i $CPU_governor_ac $CPU_governor_bat
+                else
+                    opt $i $CPU_governor_val;
+                fi
+            done
+            blk_part_end
+        fi
+
+        if [ $CPU_cooling_state == true ]; then
+            blk_part "cpu cooling state" "$CPU_cooling_state_val" "/sys/class/thermal/cooling_device*/cur_state"
+            for i in /sys/class/thermal/cooling_device*; do
+                if [ "$(<$i/type)" == "Processor" ]; then
+                    if [ $action == now ]; then
+                        acdc_test "$(elacs_mun $(< $i/max_state) $(< $i/cur_state))" $CPU_cooling_state_ac $CPU_cooling_state_bat
+                    else
+                        opt $i/cur_state "$(num_scale "$(< $i/max_state)" $CPU_cooling_state_val)"
+                    fi
+                fi
+            done
+            blk_part_end
+        fi
+    fi
+}
+
+video() {
+    if [ $VIDEO == true ]; then
+        blk_start "Video"
+
+        if [ $VIDEO_amd == true ]; then
+            blk_part "amd profile" "$VIDEO_amd_val" "/sys/class/drm/card0/device/power_profile"
+            if [ $action == now ]; then
+                acdc /sys/class/drm/card0/device/power_method profile profile
+                acdc /sys/class/drm/card0/device/power_profile $VIDEO_amd_ac $VIDEO_amd_bat
+            else
+                opt /sys/class/drm/card0/device/power_method profile
+                opt /sys/class/drm/card0/device/power_profile $VIDEO_amd_val
+            fi
+            blk_part_end
+        fi
+
+        if [ $VIDEO_intel == true ]; then
+            blk_part "intel rc6" "$VIDEO_intel_val" "/sys/module/i915/parameters/enable_rc6"
+            if [ $action == now ]; then
+                acdc /sys/module/i915/parameters/enable_rc6 $VIDEO_intel_ac $VIDEO_intel_bat
+            else
+                opt /sys/module/i915/parameters/enable_rc6 $VIDEO_intel_val
+            fi
+            blk_part_end
+        fi
+
+        if [ $VIDEO_backlight == true ]; then
+            blk_part "backlight" "$VIDEO_backlight_val" "${VIDEO_backlight_path}/brightness"
+            if [ $action == now ]; then
+                acdc_test "$(elacs_mun $(< $VIDEO_backlight_path/max_brightness) $(< $VIDEO_backlight_path/brightness))" $VIDEO_backlight_ac $VIDEO_backlight_bat
+            else
+                opt $VIDEO_backlight_path/brightness $(num_scale $(< $VIDEO_backlight_path/max_brightness) $VIDEO_backlight_val);
+                echo -n $(( ((100000/$(</sys/class/backlight/intel_backlight/max_brightness))*$(</sys/class/backlight/intel_backlight/brightness))/1000 )) > /tmp/bright
+            fi
+            blk_part_end
+        fi
+
+        # TODO: bbswitch
+    fi
+}
+
+usb() {
+    if [ $USB == true ]; then
+        local i
+        blk_start "USB"
+        if [ $USB_autosuspend == true ]; then
+            blk_part "autosuspend" "$USB_autosuspend_val" "/sys/bus/usb/devices/*/power/autosuspend"
+            for i in /sys/bus/usb/devices/*/power/autosuspend; do
+                if [ $action == now ]; then
+                    acdc $i $USB_autosuspend_ac $USB_autosuspend_bat
+                else
+                    opt $i $USB_autosuspend_val
+                fi
+            done
+            blk_part_end
+        fi
+        if [ $USB_powersave == true -a $BUS != true ]; then
+            blk_part "power control" "$USB_powersave_val" "/sys/bus/usb/devices/+([^:])/power/control)"
+            for i in /sys/bus/usb/devices/+([^:]); do
+                if [ $action == now ]; then
+                    if is_usb_hid "$i"; then
+                        acdc $i/power/control on on
+                    else
+                        acdc $i/power/control $USB_powersave_ac $USB_powersave_bat
+                    fi
+                else
+                    if is_usb_hid "$i"; then
+                        opt $i/power/control on
+                    else
+                        opt $i/power/control $USB_powersave_val
+                    fi
+                fi
+            done
+            blk_part_end
+        fi
+
+    fi
+}
+
+net() {
+    if [ $NET == true ]; then
+        local i
+        local wifi_interfaces=$(iw dev | awk '$1 == "Interface" { print $2 }')
+        local wired_interfaces
+        blk_start "Network"
+
+        if [ $NET_wifi_pm == true ]; then
+            blk_part "wifi power management" "$NET_wifi_pm_val" "$wifi_interfaces"
+            for i in $wifi_interfaces; do
+                if [ $action == now ]; then
+                    acdc_test $(iw dev "$i" get power_save | cut -d " " -f 3) $NET_wifi_pm_ac $NET_wifi_pm_bat
+                else
+                    run iw dev $i set power_save $NET_wifi_pm_val
+                fi
+            done
+            blk_part_end
+        fi
+
+        if [ $NET_wol == true ]; then
+            for i in $(ip a | egrep '^[0-9]+:' | sed 's/^[0-9]\+: \([a-zA-Z0-9_-]\+\):.*/\1/g'); do
+                if [ $i != lo -a  "${wifi_interfaces/$i}" == "$wifi_interfaces" ]; then
+                    wired_interfaces="$wired_interfaces $i"
+                fi
+            done
+            blk_part "wol" "$NET_wol_val" "$wired_interfaces"
+            for i in $wired_interfaces; do
+                if [ $i != lo -a  "${wifi_interfaces/$i}" == "$wifi_interfaces" ]; then
+                    if [ $action == now ]; then
+                        echo -e -n "${COL_BLU}!${COL_DEF}"
+                    else
+                        run ethtool -s "$i" wol ${NET_wol_val}
+                    fi
+                fi
+            done
+            blk_part_end
+        fi
+    fi
+}
+
+other() {
+    if [ $OTHER_nmi_watchdog == true -o $OTHER_aspm == true ]; then
+        local i
+        blk_start "Other"
+
+        if [ $OTHER_nmi_watchdog == true ]; then
+            blk_part "nmi watchdog" "$OTHER_nmi_watchdog_val" "/proc/sys/kernel/nmi_watchdog"
+            if [ $action == now ]; then
+                acdc /proc/sys/kernel/nmi_watchdog $OTHER_nmi_watchdog_ac $OTHER_nmi_watchdog_bat
+            else
+                opt /proc/sys/kernel/nmi_watchdog $OTHER_nmi_watchdog_val
+            fi
+            blk_part_end
+        fi
+
+        if [ $OTHER_aspm == true ]; then
+            blk_part "aspm" "$OTHER_aspm_val" "/sys/module/pcie_aspm/parameters/policy"
+            if [ $action == now ]; then
+                acdc_test $(cat /sys/module/pcie_aspm/parameters/policy | sed 's/.*\[\([a-z]\+\)\].*/\1/') $OTHER_aspm_ac $OTHER_aspm_bat
+            else
+                if grep "pcie_aspm\s*=\s*force" /proc/cmdline &> /dev/null; then
+                    #warnmsg "forced ASPM is considered harmful"
+                    echo -e -n "${COL_RED}!${COL_DEF}"
+                fi
+                opt /sys/module/pcie_aspm/parameters/policy $OTHER_aspm_val
+            fi
+            blk_part_end
+        fi
+
+        if [ $OTHER_alsa == true ]; then
+            blk_part "alsa" "$OTHER_alsa_powersave_val [$OTHER_alsa_powersave_controller_val]" "/sys/modules/snd_*/parameters/power_save[_controller]"
+            for i in /sys/module/snd_*; do
+                if [ $action == now ]; then
+                    if [ -e $i/parameters/power_save ]; then
+                        acdc $i/parameters/power_save $OTHER_alsa_powersave_ac $OTHER_alsa_powersave_bat
+                    fi
+                    if [ -e $i/parameters/power_save_controller ]; then
+                        acdc $i/parameters/power_save_controller $OTHER_alsa_powersave_controller_ac $OTHER_alsa_powersave_controller_bat
+                    fi
+                else
+                    if [ -e $i/parameters/power_save ]; then
+                        opt $i/parameters/power_save $OTHER_alsa_powersave_val
+                    fi
+                    if [ -e $i/parameters/power_save_controller ]; then
+                        opt $i/parameters/power_save_controller $OTHER_alsa_powersave_controller_val
+                    fi
+                fi
+            done
+            blk_part_end
+        fi
+
+        if [ $OTHER_sysctl == true ]; then
+            local c=0
+            declare -a keys
+            declare -a vals_ac
+            declare -a vals_bat
+	    declare -a vals
+
+            for i in $OTHER_sysctl_ac; do
+                keys[$c]="${i/=*/}"
+                vals_ac[$c]="${i/*=/}"
+                let c++
+            done
+            c=0
+            for i in $OTHER_sysctl_bat; do
+                vals_bat[$c]="${i/*=/}"
+                let c++
+            done
+
+            if [ $action == ac ]; then
+		vals=("${vals_ac[@]}")
+	    else
+		vals=("${vals_bat[@]}")
+	    fi
+
+            blk_part "sysctl" "${vals[*]}" "${keys[*]}"
+
+            for i in ${!vals[*]}; do
+		if [ $action == now ]; then
+		    acdc_test $(sysctl ${keys[$i]} | cut -d " " -f 3) ${vals_ac[$i]} ${vals_bat[$i]}
+		else
+                    run sysctl ${keys[$i]}=${vals[$i]}
+		fi
+            done
+            blk_part_end
+        fi
+    fi
+}
+
+disk() {
+    if [ $DISK == true ]; then
+        local i
+        local devices
+        blk_start "Disk"
+
+        if [ $DISK_alpm == true ]; then
+            blk_part "alpm" "$DISK_alpm_val" "/sys/class/scsi_host/host*/link_power_management_policy:"
+            for i in /sys/class/scsi_host/host*/link_power_management_policy; do
+                if [ $action == now ]; then
+                    acdc $i $DISK_alpm_ac $DISK_alpm_bat
+                else
+                    opt "$i" $DISK_alpm_val
+                fi
+            done
+            blk_part_end
+        fi
+
+        if [ $DISK_remount == true ]; then
+            devices=$(awk '/^\/dev\/((sd)|(mapper\/[^ ]+)).*ext[0-9]/ {print $1}' /etc/mtab | tr "\n" " ")
+            blk_part "remount" "$DISK_remount_val" "${devices%${devices##*[! ]}}"
+            for i in $devices; do
+                if [ $action == now ]; then
+                    echo -e -n "${COL_BLU}!${COL_DEF}"
+                else
+                    run mount -o "remount,${DISK_remount_val}" "$i"
+                fi
+            done
+            blk_part_end
+        fi
+
+        if [ $DISK_readahead == true ]; then
+            devices=$(awk '/^\/dev\/(sd)|(mapper\/[^ ]+)/ {print $1}' /etc/mtab | tr "\n" " ")
+            blk_part "readahead" "$DISK_readahead_val" "${devices%${devices##*[! ]}}"
+            for i in $devices; do
+                if [ $action == now ]; then
+                    acdc_run $DISK_readahead_ac $DISK_readahead_bat blockdev --getra "$i"
+                else
+                    run blockdev --setra "$DISK_readahead_val" "$i"
+                fi
+            done
+            blk_part_end
+        fi
+
+        if [ "$DISK_hdparm_devices" != none ]; then
+            if [ $DISK_apm == true -o $DISK_spindown == true ]; then
+                local parm
+                [ $DISK_apm == true ] && parm="$parm -B $DISK_apm_val"
+                [ $DISK_spindown == true ] && parm="$parm -S $DISK_spindown_val"
+                blk_part "hdparm" "$parm" "$DISK_hdparm_devices"
+                for i in $DISK_hdparm_devices; do
+                    if [ $action == now ]; then
+                        echo -e -n "${COL_BLU}!${COL_DEF}"
+                    else
+                        run hdparm $parm "$i"
+                    fi
+                done
+            fi
+            blk_part_end
+        fi
+    fi
+}
+
+bus() {
+    if [ $BUS == true ]; then
+        local i
+        blk_start "BUS"
+        if [ $BUS_powersave == true ]; then
+            blk_part "power control" "$BUS_powersave_val" "/sys/bus/*/devices/*/power/control"
+            for i in /sys/bus/*/devices/*/power/control; do
+                devpath=$(dirname $(dirname "$i"))
+                if [ $action == now ]; then
+                    if is_usb_hid "$devpath"; then
+                        acdc $i on on
+                    else
+                        acdc $i $BUS_powersave_ac $BUS_powersave_bat
+                    fi
+                else
+                    if is_usb_hid "$devpath"; then
+                        opt $i on
+                    else
+                        opt $i $BUS_powersave_val
+                    fi
+                fi
+            done
+            blk_part_end
+        fi
+
+    fi
+}
+
+# TODO: bus 
+# TODO: modules 
+
+
+
 
 # diable nvidia cards
 bbswitch() {
     if [ "$BBSWITCH" == "true" -o "$BBSWITCH" == "on" ]; then
         if [ -f /proc/acpi/bbwitch ]; then
             if [ "$1" == "now" ]; then
-                dump /proc/acpi/bbwitch
+                dump /proc/acpi/bbswitch
             else
+                setmsg "bbswitch" "$1"
                 echo $1 > /proc/acpi/bbswitch
             fi
         fi
     fi
 }
 
-# bus ... seems to be eeeeeevil
-bus() {
-    if [ "$BUS" == "true" ]; then
-        local i
-        for i in /sys/bus/*/devices/*/power/control; do
-            if [ "$1" == "now" ]; then
-                dump $i
-            else
-                opt "$i" $1;
-            fi
-        done
-    fi
-}
-
-# usb autosuspend
-usb() {
-    local i
-
-    if [ "$USB" == "true" ]; then
-        if [ "$USB_autosuspend" == "true" ]; then
-            for i in /sys/bus/usb/devices/*/power/autosuspend; do
-                if [ "$1" == "now" ]; then
-                    dump /proc/acpi/bbwitch
-                else
-                    opt "$i" "$1";
-                fi
-            done
-        fi
-        if [ "$USB_powersave" == "true" -a "$BUS" == "false" ]; then
-            for i in /sys/bus/usb/devices/*/power/control; do
-                if [ "$1" == "now" ]; then
-                    dump /proc/acpi/bbwitch
-                else
-                    opt "$i" on;
-                fi
-            done
-            for i in "/sys/bus/usb/devices/+([^:])"; do
-                if [ "$1" == "now" ]; then
-                    dump /proc/acpi/bbwitch
-                else
-                    is_usb_hid "$usbdev" && opt $usbdev/power/control on || opt $usbdev/power/control "$2"
-                fi
-            done
-        fi
-
-    fi
-}
-
-# nmi_watchdog
-nmi() {
-    if [ "$NMI" == "true" ]; then
-        if [ "$1" == "now" ]; then
-            dump /proc/sys/kernel/nmi_watchdog
-        else
-            opt /proc/sys/kernel/nmi_watchdog $1
-        fi
-    fi
-}
-
-# cpu
-cpu() {
-    if [ "$CPU" == "true" ]; then
-        if [ ! -z "$1" ]; then
-            case "$1" in
-                powersave|ps|psafe) CPU_GOV="powersave" ;;
-                ondemand|od) CPU_GOV="ondemand" ;;
-                conservative|cv) CPU_GOV="conservative" ;;
-                *) CPU_GOV="ondemand" ;;
-            esac
-            for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-                if [ "$1" == "now" ]; then
-                    dump $i
-                else
-                    opt "$i" $CPU_GOV;
-                fi
-            done
-        fi
-        if [ ! -z "$2" ]; then
-            if [ "$2" -gt 0 -a "$2" -lt 6 ]; then
-                for i in /sys/class/thermal/cooling_device*; do
-                    if [ "$1" == "now" ]; then
-                        dump $i/cur_state
-                    else
-                        # FIXME bad scaling i think
-                        opt "$i/cur_state" "$(num_scale "$i/max_state" $2)";
-                    fi
-                done
-            fi
-        fi
-    fi
-}
-
-# aspm
-aspm() {
-    if [ "$ASPM" == "true" ]; then
-        if [ "$1" == "now" ]; then
-            dump /sys/module/pcie_aspm/parameters/policy
-        else
-            opt /sys/module/pcie_aspm/parameters/policy $1
-        fi
-    fi
-}
-
-# kernel write mode
-vm() {
-    if [ "$VM" == "true" ]; then
-        if [ "$1" == "now" ]; then
-            dump /proc/sys/vm/laptop_mode
-            dump /proc/sys/vm/dirty_ratio
-            dump /proc/sys/vm/dirty_background_ratio
-            dump /proc/sys/vm/dirty_expire_centisecs
-            dump /proc/sys/vm/dirty_writeback_centisecs
-        else
-            opt /proc/sys/vm/laptop_mode $1
-            opt /proc/sys/vm/dirty_ratio $2
-            opt /proc/sys/vm/dirty_background_ratio $3
-            opt /proc/sys/vm/dirty_expire_centisecs $4
-            opt /proc/sys/vm/dirty_writeback_centisecs $5
-        fi
-    fi
-}
-
-# disk
-disk() {
-    if [ "$DISK" == "true" ]; then
-        if [ "$DISK_link_pm" == "true" ]; then
-            for i in /sys/class/scsi_host/host*/link_power_management_policy; do
-                if [ "$1" == "now" ]; then
-                    dump $i
-                else
-                    opt "$i" $1;
-                fi
-            done
-        fi
-        if [ "$DISK_mount_options" == "true" ]; then
-            for dev in $(awk '/^\/dev\/sd.*ext[0-9]/ {print $1}' /etc/mtab); do
-                run mount -o remount,$2 "$dev";
-                # TODO: now
-            done
-            for dev in $(awk '/^\/dev\/sd/ {print $1}' /etc/mtab); do
-                if [ "$1" == "now" ]; then
-                    echo " -> $dev readahead: "$(blockdev --getra "$dev")
-                else
-                    run blockdev --setra $3 "$dev";
-                fi
-            done
-        fi
-        if [ "$DISK_spindown" != "" ]; then
-            for dev in $DISK_spindown; do
-                if [ "$1" != "now" -a -e "$dev" ]; then
-                    run hdparm -B $4 -S $5 "$dev";
-                fi
-            done
-        fi
-    fi
-}
-
-# sound card
-sound() {
-    if [ "$SOUND" == "true" ]; then
-        if [ "$1" == "now" ]; then
-            dump /sys/module/snd_hda_intel/parameters/power_save
-            dump /sys/module/snd_hda_intel/parameters/power_save_controller
-            dump /sys/module/snd_ac97_codec/parameters/power_save
-        else
-            opt /sys/module/snd_hda_intel/parameters/power_save $1
-            opt /sys/module/snd_hda_intel/parameters/power_save_controller $2
-            opt /sys/module/snd_ac97_codec/parameters/power_save $3
-        fi
-    fi
-}
-
-# net
-net() {
-    if [ "$NET" == "true" ]; then
-        if [ "$1" == "now" ]; then
-            for i in $(iw dev | awk '$1 == "Interface" { print $2 }'); do display_wireless "$i"; done
-            # TODO: wol
-            exit
-        fi
-        for i in $(iw dev | awk '$1 == "Interface" { print $2 }'); do
-            if [ "$1" == "now" ]; then
-                display_wireless "$i";
-                # TODO: ethtool now
-            else
-                run iw dev "$i" set power_save $1;
-                run ethtool -s "$i" wol d
-            fi
-        done
-        # TODO: ac mode
-        for i in $(iwconfig 2>&1 | grep -P '^(?!lo)[a-zA-Z0-9]+\s*no' | awk '{print $1}'); do
-            run ethtool -s "$i" wol d
-            # TODO: now
-        done
-    fi
-}
-
-# backlight
-backlight() {
-    if [ "$BACKLIGHT" == "true" ] ; then
-        if [ "$1" == "now" ]; then
-            # TODO: use scaling
-            for i in /sys/class/backlight/*; do dump "$i/brightness"; done
-            exit
-        fi
-        for i in /sys/class/backlight/${BACKLIGHT_type}*; do 
-            max_brightness=$(cat $i/max_brightness)
-            opt "$i/brightness" "$(num_scale "$i/max_brightness" $1)";
-        done
-    fi
-}
-
 # webcam
 webcam() {
     if [ "$WEBCAM" == "true" ]; then
+        blk_part $1 "webcam" $1 "ucvideo, videodev"
         if [ "$1" == "now" ]; then
             display_module uvcvideo
             display_module nouveau
-            exit
-        fi
-        # TODO: propper else
-        if [ "$1" == "off" ]; then
+        elif [ "$1" == "off" ]; then
             unload_mod uvcvideo
             unload_mod videodev
         else
             load_mod uvcvideo
             load_mod videodev
         fi
+        blk_part_end $1
     fi
 }
 
@@ -254,47 +571,21 @@ bluetooth() {
         fi
         # TODO: propper else
         if [ "$1" == "off" ]; then
+            warnmsg "wont be started again"
+            echo "Stopping bluetooth"
+            /etc/init.d/bluetooth stop
+            echo "Unload bnep, btusp, bluetooth module"
+            unload_mod bnep
             unload_mod btusb
             unload_mod bluetooth
         else
+            echo "Load bnep, btusp, bluetooth module"
             load_mod btusb
             load_mod bluetooth
         fi
     fi
 }
 
-# video
-video() {
-    if [ "$VIDEO" == "true" ]; then
-        if [ "$1" == "now" ]; then
-            if [ "$VIDEO_ati_open" == "true" ]; then
-                dump /sys/class/drm/card0/device/power_method
-                dump /sys/class/drm/card0/device/power_profil
-            fi
-            if [ "$VIDEO_intel" == "true" ]; then
-                dump /sys/module/i915/parameters/i915_enable_rc6
-            fi
-            exit
-        fi
-        # open source ATI
-        if [ "$VIDEO_ati_open" == "true" ]; then
-            opt /sys/class/drm/card0/device/power_method profile
-            if [ "$1" == "performance" ]; then
-                opt /sys/class/drm/card0/device/power_profile default
-            else
-                opt /sys/class/drm/card0/device/power_profile low
-            fi
-        fi
-        # i915
-        if [ "$VIDEO_intel" == "true" ]; then
-            if [ "$1" == "performance" ]; then
-                opt /sys/module/i915/parameters/i915_enable_rc6 0
-            else
-                opt /sys/module/i915/parameters/i915_enable_rc6 1
-            fi
-        fi
-    fi
-}
 
 euidz() {
     if [[ $EUID != 0 ]]; then
@@ -307,47 +598,37 @@ euidz() {
     fi
 }
 
-source LIBPREFIX/fd-pm-functions
-source ETCPREFIX/ferrydust/pm.rc
+source /usr/local/lib/fd-pm-functions
+source /etc/ferrydust/pm.rc
+
+doordie() {
+    cpu
+    bus
+    video
+    #bbswitch
+    usb
+    net
+    disk
+    #sound
+    #webcam
+    #bluetooth
+    other
+}
 
 case "$1" in
     ac|up|performance)
         action="ac"
         euidz
         logger -t "fd-pm" "disabling power saving"
-        bbswitch "ON"
-        bus "on"
-        usb "600" "on"
-        nmi "1"
-        cpu "$CPU_powered_governor" "$CPU_powered_thermal"
-        aspm "default"
-        vm "0" "30" "10" "600" "600"
-        disk "medium_power" "relatime" "256" "254" "253"
-        sound "0" "N" "0"
-        net "off"
-        backlight "5"
-        webcam "on"
-        bluetooth "on"
-        video "performance"
+        setval
+        doordie
         ;;
     bat|down|powersave)
         action="bat"
         euidz
         logger -t "fd-pm" "enabling power saving"
-        bbswitch "OFF"
-        bus "auto"
-        usb "10" "auto"
-        nmi "0"
-        cpu "$CPU_governor"
-        aspm "powersave" "$CPU_thermal"
-        vm "$VM_laptop_mode" "$VM_dirty_ratio" "$VM_dirty_background_ratio" "$VM_dirty_expire_centisecs" "$VM_dirty_writeback_centisecs"
-        disk "min_power" "noatime" "4096" "1" "$DISK_spindown_to"
-        sound "1" "Y" "1"
-        net "on"
-        backlight "1"
-        webcam "off"
-        bluetooth "off"
-        video "powersave"
+        setval
+        doordie
         ;;
     ""|now|status|info)
         lock
@@ -355,20 +636,58 @@ case "$1" in
         euidz "You need to be root for further details"
         echo
         echo " :: Detail"
-        bbswitch "now"
-        bus "now"
-        usb "now"
-        nmi "now"
-        cpu "$CPU_powered_governor" "$CPU_powered_thermal" "now"
-        aspm "now"
-        vm "now"
-        disk "now"
-        sound "now"
-        net "now"
-        backlight "now"
-        webcam "now"
-        bluetooth "now"
-        video "now"
+        cur_state=$(< /sys/class/power_supply/AC/online)
+        action=now
+        setval
+        doordie
+        ;;
+    cfg)
+        action="cfg"
+        cur_state=$(< /sys/class/power_supply/AC/online)
+        if [ "$cur_state" -eq 1 ]; then
+            action="ac"
+        else
+            action="bat"
+        fi
+        setval
+
+        echo "CPU: $CPU"
+        if [ $CPU == true ]; then
+            echo -n "  Governor: "; [ $CPU_governor != true ] && echo "none" || echo CPU_governor_val
+            echo -n "  Cooling state: "; [ $CPU_cooling_state != true ] && echo "none" || echo $CPU_cooling_state_val
+        fi
+        echo "VIDEO: $VIDEO"
+        if [ $VIDEO == true ]; then
+            [ $VIDEO_amd == true ] && echo "  AMD: $VIDEO_amd_val"
+            [ $VIDEO_intel == true ] && echo "  Intel: $VIDEO_intel_val"
+            [ $VIDEO_intel == true -o $VIDEO_amd == true ] && echo "  Backlight: $VIDEO_backlight_val ($VIDEO_backlight_path)"
+        fi
+        echo "USB: $USB"
+        if [ $USB == true ]; then
+            [ $USB_autosuspend == true ] && echo "  Autosuspend: $USB_autosuspend_val"
+            [ $USB_powersave == true ] && echo "  Powersave: $USB_powersave_val"
+        fi
+        echo "NET: $NET"
+        if [ $NET == true ]; then
+            [ $NET_wifi_pm == true ] && echo "  Wifi PM: $NET_wifi_pm_val"
+            [ $NET_wol == true ] && echo "  WOL: $NET_wol_val"
+        fi
+        echo "DISK: $DISK"
+        if [ $DISK == true ]; then
+            [ $DISK_alpm == true ] && echo "  ALPM: $DISK_alpm_val"
+            [ $DISK_remount == true ] && echo "  Remount: $DISK_remount_val ($DISK_remount_options_val)"
+            [ $DISK_readahead == true ] && echo "  Readahead: $DISK_readahead_val"
+            [ $DISK_apm == true -o $DISK_spindown == true ] && echo "  HDParm: $DISK_apm_val $DISK_spindown_val ($DISK_hdparm_devices)"
+        fi
+        echo "OTHER:"
+        [ $OTHER_nmi_watchdog == true ] && echo "  NMI Watchdog: $OTHER_nmi_watchdog_val"
+        [ $OTHER_aspm == true ] && echo "  ASPM: $OTHER_aspm_val"
+        [ $OTHER_alsa_powersave == true ] && echo "  Alsa powersave: $OTHER_alsa_powersave_val"
+        [ $OTHER_sysctl == true ] && echo "  VM: $OTHER_sysctl_val"
+        echo "BUS: $BUS"
+        if [ $BUS == true ]; then
+            echo "  Powersave: $BUS_powersave"
+        fi
         ;;
     *)
         echo "fd-pm [ac|bat|now]"

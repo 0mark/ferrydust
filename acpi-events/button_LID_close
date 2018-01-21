@@ -1,2 +1,2 @@
 event=button.*(LID).*close
-action=
+action=killall -s SIGHUP srandrd

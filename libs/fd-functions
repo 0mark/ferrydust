@@ -13,5 +13,108 @@ prime_user() {
 }
 
 display_by_username() {
-	ps au | grep -e "^$1.*/usr/bin/X\s\+:[0-9]\+" | sed 's#.*/usr/bin/X\s\+\(:[0-9]\+\).*#\1#g'
+    ps au | grep -e "^$1.*/usr/bin/X\s\+:[0-9]\+" | sed 's#.*/usr/bin/X\s\+\(:[0-9]\+\).*#\1#g'
+}
+
+mount_dev_is_permitted() {
+    local ii
+    for ii in ${MOUNT_DEVS[@]}; do
+        local j=$(basename $1)
+        if [ "${j:0:${#ii}}" == "$ii" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+mount_dev_is_blocked() {
+    local ii
+    for ii in ${MOUNT_BLOCK[@]}; do
+        local j=$(basename $1)
+        if [ "${j:0:${#ii}}" == "$ii" ]; then
+            return 0
+        fi
+    done
+    return 1
+
+}
+
+umount_dev_is_auto_blocked() {
+    local ii
+    for ii in ${UMOUNT_AUTO_SKIP[@]}; do
+        local j=$(basename $1)
+        if [ "${j:0:${#ii}}" == "$ii" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+dev_is_mountable() {
+    local dev=$1
+    local mounted=$2
+
+    if [ -b "$dev" ]; then
+        if mount_dev_is_blocked "$dev"; then
+            blocked=1
+        else
+            blocked=0
+            local i
+            for i in $mounted; do
+                if [ "$i" == "$dev" ]; then blocked=1; fi
+            done
+        fi
+        if [ $blocked -eq 0 ]; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+get_mountable_devs() {
+    local devices=""
+    local mounted="$(mount | cut -d " " -f 1)"
+    local i
+    local ii
+
+    if [ "$MOUNT_THING" == "udiskie" ]; then
+        for i in $(udiskie-info -a -f is_filesystem); do
+	echo $i
+            if dev_is_mountable "$i" "$mounted"; then
+                devices="${devices}${i}\n"
+            fi
+        done
+    elif [ "$MOUNT_THING" == "pmount" ]; then
+        for i in ${MOUNT_DEVS[@]}; do
+            for ii in /dev/${i}*; do
+                if dev_is_mountable "$ii" "$mounted"; then
+                    devices="${devices}${ii}\n"
+                fi
+            done
+        done
+    fi
+
+    echo -e "${devices}"
+}
+
+get_unmountable_devs() {
+    local devices=""
+    local i
+
+    if [ "$MOUNT_THING" == "udiskie" ]; then
+        un="$(whoami)"
+        SAVEIFS=$IFS
+        IFS=$(echo -en "\n\b")
+        for i in $(mount | grep "/run/media/$un" | sed 's#/.*\? on /\([^/]\+/\)\+\(.*\?\) type .*#\2#g;'); do
+            devices="${devices}${i}\n"
+        done
+        IFS=$SAVEIFS
+    elif [ "$MOUNT_THING" == "pmount" ]; then
+        for i in $(mount | grep " on /media" | cut -d " " -f 1); do
+            devices="${devices}${i}\n"
+        done
+    fi
+
+    echo -e "${devices}"
 }

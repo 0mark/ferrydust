@@ -7,4 +7,4 @@ shift 1
 command=$(fd-getkey $app"App")
 [ -z "$command" ] && exit 1
 
-exec $command "$@"
+eval "exec $command $@"

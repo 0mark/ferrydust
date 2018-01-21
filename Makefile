@@ -13,12 +13,11 @@ MKINST=./inst.sh ${ETCPREFIX} ${SBINPREFIX} ${BINPREFIX} ${LIBPREFIX} ${ACPIPREF
 install:
 	@echo "installing scripts to ${BINPREFIX}"
 	@mkdir -p ${DESTDIR}${BINPREFIX}
-	@${MKINST} ./scripts ${DESTDIR}${BINPREFIX} 755 
-	fd-app  fd-getkey fd-haskey fd-iftrue fd-mount fd-pm fd-ulock fd-unotify fd-urandr ferrycharm ferryglamour ferrysparkle
+	@${MKINST} ./scripts ${DESTDIR}${BINPREFIX} 755 fd-app fd-display-daemon fd-getkey fd-haskey fd-iftrue fd-mount fd-pm fd-ulock fd-unotify fd-urandr ferrycharm ferryglamour ferrysparkle
 
 	@echo "installing scripts to ${SBINPREFIX}"
 	@mkdir -p ${DESTDIR}${SBINPREFIX}
-	@${MKINST} ./scripts ${DESTDIR}${SBINPREFIX} 755 fd-backup fd-lowbat fd-smapi-bat fd-bright-ctrl fd-suspend fd-tablet
+	@${MKINST} ./scripts ${DESTDIR}${SBINPREFIX} 755 fd-backup fd-bright-ctrl fd-lowbat fd-smapi-bat fd-suspend fd-tablet
 
 	@echo "installing libs to ${LIBPREFIX}"
 	@mkdir -p ${DESTDIR}${LIBPREFIX}
@@ -40,8 +39,5 @@ install:
 	@cp -f example/ferryglamour.rc ${DESTDIR}${SHAREPREFIX}/ferrydust/ferryglamour.rc
 
 	@echo "installing udev rules to ${UDEVPREFIX}/rules.d"
-	@install -D udev_rules/80-fd-pm.rules ${DESTDIR}${UDEVPREFIX}/rules.d/81-backup.rules
-
-# .PHONY: install
-# 	install -d ${DESTDIR}${ETCPREFIX}/powerdown/down
-# 	install -d ${DESTDIR}${ETCPREFIX}/powerdown/up
+	@install -D udev_rules/80-fd-pm.rules ${DESTDIR}${UDEVPREFIX}/rules.d/80-fd-pm.rules
+	@install -D udev_rules/81-backup.rules ${DESTDIR}${UDEVPREFIX}/rules.d/81-backup.rules

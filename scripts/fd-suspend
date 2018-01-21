@@ -4,26 +4,42 @@
 #set -e
 
 source ETCPREFIX/ferrydust/system.rc
+source LIBPREFIX/fd-functions
 
 function susprep {
+    fd-unotify -a ferrydust "Falling asleep..."
+
     logger -t suspend "sleeping down"
-    for A in $(ls /media/); do pumount $A; done;
+    fd-mount umount_all
+    if [ $? -ne 0 ]; then
+        logger -t suspend "Suspend failed due to unmounted file systems"
+        fd-unotify -a ferrydust "Suspend failed due to unmounted file systems"
+        exit 1
+    fi
+    umount -a -t nfs,cifs,davfs,smbfs
+    if [ $? -ne 0 ]; then
+        logger -t suspend "Suspend failed due to unmounted file systems"
+        fd-unotify -a ferrydust "Suspend failed due to unmounted file systems"
+        exit 1
+    fi
     $NET_DOWN
     BINPREFIX/fd-ulock &
     sleep 0.2
     sync
-    logger -t suspend "sleeping now"
+    logger -t suspend "sleeping now..."
 }
 
 function suspres {
     logger -t suspend "waking up"
     $NET_UP
     if [ "$(</sys/class/power_supply/AC/online)" -ne 1 ]; then
-        $(sleep 5; BINPREFIX/fd-pm down) &
+        { sleep 5; BINPREFIX/fd-pm down } &
     else
-        $(sleep 5; BINPREFIX/fd-pm up) &
+        { sleep 5; BINPREFIX/fd-pm up } &
     fi
     logger -t suspend "woken up"
+
+    fd-unotify -a ferrydust "Woken up"
 }
 
 to=$1

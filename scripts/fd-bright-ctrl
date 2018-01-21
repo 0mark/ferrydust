@@ -2,20 +2,118 @@
 
 source ETCPREFIX/ferrydust/system.rc
 
+if [ "$BRIGHT_PATH" == "" ]; then
+	echo "BRIGHT_PATH not defined, looking for one in /sys/class/backlight/*/brightness"
+	for i in /sys/class/backlight/*/brightness; do
+		BRIGHT_PATH="$(dirname $i)"
+		break
+	done
+	if [ "$BRIGHT_PATH" != "" ]; then
+		echo " * found $BRIGHT_PATH"
+	else
+		echo " * but to no avail"
+		exit 1
+	fi
+fi
+if [ "$BRIGHT_STEPS" == "" ]; then
+	echo "BRIGHT_STEPS not defined"
+	echo " * assuming 10"
+	BRIGHT_STEPS=10
+fi
+
+if [ "$BRIGHT_FADE_STEPS" != "" -a "${1%_*}" == "fade" ]; then
+	BRIGHT_STEPS=$BRIGHT_FADE_STEPS
+fi
+
+if [ ! -d "$BRIGHT_PATH" ]; then
+	echo "Path '$BRIGHT_PATH' not found"
+	exit 1
+fi
+
+if [ -f /tmp/bright ]; then
+	touch /tmp/bright
+	chmod a+r /tmp/bright
+fi
+
 max=$(cat $BRIGHT_PATH/max_brightness)
 step=$(($max/$BRIGHT_STEPS))
 cur=$(cat $BRIGHT_PATH/brightness)
 
-if [ "$1" = "down" ]; then
-    next=$(($cur-$step))
-    if [ $next -lt 1 ]; then
-        next=1
-    fi
-else
-    next=$(($cur+$step))
-    if [ $next -gt $max ]; then
-        next=$max
-    fi
-fi
+up() {
+	local lmax=$1
+	local next=$(($cur+$step))
 
-echo "$next" > $BRIGHT_PATH/brightness
+	if [ $next -gt $lmax ]; then
+		next=$lmax
+	fi
+
+	echo "$next" > $BRIGHT_PATH/brightness
+
+	echo -n $(( ((100000/$(<$BRIGHT_PATH/max_brightness))*$(<$BRIGHT_PATH/brightness))/1000 )) > /tmp/bright
+}
+
+down() {
+	local lmin=$1
+	local next=$(($cur-$step))
+
+	if [ $next -lt $lmin ]; then
+		next=$lmin
+	fi
+
+	echo -n $(((100/$BRIGHT_STEPS)*($next/$step))) > /tmp/bright
+
+	echo "$next" > $BRIGHT_PATH/brightness
+
+	echo -n $(( ((100000/$(<$BRIGHT_PATH/max_brightness))*$(<$BRIGHT_PATH/brightness))/1000 )) > /tmp/bright
+}
+
+case "$1" in
+	up)
+		up $max
+		;;
+	down)
+		down 1
+		;;
+	cur)
+		echo $cur
+		;;
+	cur_step)
+		echo "$(($cur/$step))"
+		;;
+	fade_down)
+		lmin=${2:-1}
+		if [ $cur -gt $lmin ]; then
+			down $lmin
+		else
+			exit 255
+		fi
+		;;
+	fade_up)
+		lmax=${2:-$max}
+		if [ $cur -lt $lmax ]; then
+			up $lmax
+		else
+			exit 255
+		fi
+		;;
+	set)
+		val=$2
+		if [ "$val" -gt $max ]; then
+			val=$max
+		elif [ "$val" -lt 1 ]; then
+			val=1
+		fi
+		echo "$val" > $BRIGHT_PATH/brightness
+		;;
+	set_step)
+		val=$(($2 * $step))
+		if [ "$val" -gt $max ]; then
+			val=$max
+		elif [ "$val" -lt 1 ]; then
+			val=1
+		fi
+		echo "$val" > $BRIGHT_PATH/brightness
+		;;
+	*)
+esac
+
